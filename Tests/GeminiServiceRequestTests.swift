@@ -16,11 +16,11 @@ struct GeminiServiceRequestTests {
                 base64Image: "encoded-image",
                 apiKey: "test-api-key",
                 promptContent: "Return LaTeX",
-                model: "gemini-3.6-flash"
+                model: "gemini-3.7-flash"
             )
 
-            expect(request.url?.path.contains("/models/gemini-3.6-flash:generateContent") == true,
-                   "Requests should use the selected Gemini 3.6 Flash model")
+            expect(request.url?.path.contains("/models/gemini-3.7-flash:generateContent") == true,
+                   "Requests should use the selected Gemini 3.7 Flash model")
             expect(request.httpMethod == "POST", "Requests should use POST")
 
             guard let body = request.httpBody,
