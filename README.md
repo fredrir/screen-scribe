@@ -53,7 +53,7 @@ ScreenScribe allows you to choose between the following Gemini models to optimiz
 
 | Model | Description |
 |-------|-------------|
-| **Gemini 3.6 Flash** | Best balance of speed, cost, and accuracy |
+| **Gemini 3.7 Flash** | Best balance of speed, cost, and accuracy |
 | **Gemini 3.1 Pro** | Most capable model for complex content |
 | **Gemini 3.5 Flash-Lite** | Fastest and most cost-effective option |
 
