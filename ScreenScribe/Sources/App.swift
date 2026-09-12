@@ -64,7 +64,7 @@ final class App: NSObject, NSApplicationDelegate {
     private var currentFeedbackTask: Task<Void, Never>?
 
     private lazy var extractTextItem: NSMenuItem = {
-        let item = NSMenuItem(title: Localized.menuTitleExtractText)
+        let item = NSMenuItem(title: "Extract Text")
         item.addAction { [weak self] in
             self?.initiateCaptureForText()
         }
@@ -74,7 +74,7 @@ final class App: NSObject, NSApplicationDelegate {
     private var promptMenuItems: [NSMenuItem] = []
 
     private lazy var settingsItem: NSMenuItem = {
-        let item = NSMenuItem(title: Localized.menuTitleSettings)
+        let item = NSMenuItem(title: "Settings")
         item.addAction { [weak self] in
             self?.showSettings()
         }
@@ -82,7 +82,7 @@ final class App: NSObject, NSApplicationDelegate {
     }()
 
     private lazy var quitItem: NSMenuItem = {
-        let item = NSMenuItem(title: Localized.menuTitleQuitTextGrabber2, action: nil, keyEquivalent: "q")
+        let item = NSMenuItem(title: "Quit", action: nil, keyEquivalent: "q")
         item.keyEquivalentModifierMask = .command
         item.addAction {
             NSApp.terminate(nil)
@@ -96,13 +96,13 @@ final class App: NSObject, NSApplicationDelegate {
     }()
 
     private lazy var historyItem: NSMenuItem = {
-        let item = NSMenuItem(title: Localized.menuTitleHistory)
+        let item = NSMenuItem(title: "Recent Captures")
         item.submenu = historyMenu
         return item
     }()
 
     private lazy var clearHistoryItem: NSMenuItem = {
-        let item = NSMenuItem(title: Localized.menuTitleClearHistory)
+        let item = NSMenuItem(title: "Clear History")
         item.addAction { [weak self] in
             self?.historyManager.clearHistory()
         }
@@ -117,7 +117,7 @@ final class App: NSObject, NSApplicationDelegate {
         item.behavior = .terminationOnRemoval
         // Temporarily disabled autosaveName to rule out caching issues after project rename
         // item.autosaveName = Bundle.main.bundleName
-        item.button?.image = .with(symbolName: Icons.textViewFinder, pointSize: 15)
+        item.button?.image = .with(symbolName: "text.viewfinder", pointSize: 15)
         Logger.log(.info, "Status item button: \(String(describing: item.button)), image: \(String(describing: item.button?.image))")
 
         let menu = NSMenu()
@@ -281,13 +281,13 @@ final class App: NSObject, NSApplicationDelegate {
     /// Returns true when user chooses to continue with the system prompt.
     private func showPermissionRequiredAlert() -> Bool {
         let alert = NSAlert()
-        alert.messageText = Localized.permissionAlertTitle
-        alert.informativeText = Localized.permissionAlertMessage
+        alert.messageText = "Screen Recording Permission"
+        alert.informativeText = "ScreenScribe needs Screen Recording permission to capture screen regions.\n\nContinue to request permission now, or open System Settings to enable it manually."
         alert.alertStyle = .informational
 
-        alert.addButton(withTitle: Localized.permissionAlertButtonContinue)
-        alert.addButton(withTitle: Localized.permissionAlertButtonOpenSystemSettings)
-        alert.addButton(withTitle: Localized.permissionAlertButtonCancel)
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "Cancel")
 
         NSApp.activate(ignoringOtherApps: true)
         let response = alert.runModal()
@@ -306,15 +306,15 @@ final class App: NSObject, NSApplicationDelegate {
     private func applyCaptureMenuState(permissionGranted: Bool) {
         extractTextItem.isEnabled = true
         extractTextItem.title = permissionGranted
-            ? Localized.menuTitleExtractText
-            : Localized.menuTitleExtractText + Localized.permissionRequired
+            ? "Extract Text"
+            : "Extract Text (Permission Required)"
 
         for (index, prompt) in promptManager.prompts.enumerated() {
             guard index < promptMenuItems.count else { continue }
             promptMenuItems[index].isEnabled = true
             promptMenuItems[index].title = permissionGranted
                 ? prompt.name
-                : prompt.name + Localized.permissionRequired
+                : prompt.name + " (Permission Required)"
         }
     }
 
@@ -441,10 +441,10 @@ final class App: NSObject, NSApplicationDelegate {
             } else {
                 updateMenuForLimitedState()
                 let alert = NSAlert()
-                alert.messageText = Localized.permissionAlertTitle
-                alert.informativeText = Localized.permissionNotGrantedMessage
-                alert.addButton(withTitle: Localized.permissionAlertButtonOpenSystemSettings)
-                alert.addButton(withTitle: Localized.permissionAlertButtonCancel)
+                alert.messageText = "Screen Recording Permission"
+                alert.informativeText = "macOS has not granted Screen Recording access to ScreenScribe. Open System Settings to review its access. If macOS asks you to quit and reopen the app, do so before capturing again."
+                alert.addButton(withTitle: "Open System Settings")
+                alert.addButton(withTitle: "Cancel")
                 NSApp.activate(ignoringOtherApps: true)
                 if alert.runModal() == .alertFirstButtonReturn {
                     permissionManager.openSystemSettings()
@@ -604,7 +604,7 @@ final class App: NSObject, NSApplicationDelegate {
             if originalStatusImage == nil {
                 originalStatusImage = button.image
             }
-            button.image = .with(symbolName: Icons.checkmark, pointSize: 15)
+            button.image = .with(symbolName: "checkmark.circle.fill", pointSize: 15)
 
             // Create new feedback restoration task
             currentFeedbackTask = Task { [weak self] in
@@ -645,7 +645,7 @@ final class App: NSObject, NSApplicationDelegate {
 
         let entries = historyManager.recentEntries
         if entries.isEmpty {
-            let emptyItem = NSMenuItem(title: Localized.menuTitleNoHistory)
+            let emptyItem = NSMenuItem(title: "No Recent Captures")
             emptyItem.isEnabled = false
             historyMenu.addItem(emptyItem)
         } else {
@@ -663,7 +663,7 @@ final class App: NSObject, NSApplicationDelegate {
                 submenu.addItem(previewItem)
                 submenu.addItem(.separator())
 
-                let copyItem = NSMenuItem(title: Localized.menuTitleCopy)
+                let copyItem = NSMenuItem(title: "Copy")
                 copyItem.addAction { [weak self] in
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(entry.text, forType: .string)

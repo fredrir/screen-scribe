@@ -13,7 +13,6 @@
 		B9583CAF2DBD8C8300F43550 /* Bundle+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9583C7D2DBD8C8300F43550 /* Bundle+Extension.swift */; };
 		B9583CB02DBD8C8300F43550 /* NSMenuItem+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9583C822DBD8C8300F43550 /* NSMenuItem+Extension.swift */; };
 		B9583CB12DBD8C8300F43550 /* NSControl+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9583C7F2DBD8C8300F43550 /* NSControl+Extension.swift */; };
-		B9583CB22DBD8C8300F43550 /* Resources.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9583C962DBD8C8300F43550 /* Resources.swift */; };
 		B9583CB32DBD8C8300F43550 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9583C8A2DBD8C8300F43550 /* GeminiService.swift */; };
 		B9583CB42DBD8C8300F43550 /* NSPasteboard+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9583C842DBD8C8300F43550 /* NSPasteboard+Extension.swift */; };
 		B9583CB52DBD8C8300F43550 /* NSObject+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9583C832DBD8C8300F43550 /* NSObject+Extension.swift */; };
@@ -67,7 +66,6 @@
 		B9583C932DBD8C8300F43550 /* Detector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Detector.swift; sourceTree = "<group>"; };
 		B9583C942DBD8C8300F43550 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		B9583C952DBD8C8300F43550 /* Recognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recognizer.swift; sourceTree = "<group>"; };
-		B9583C962DBD8C8300F43550 /* Resources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Resources.swift; sourceTree = "<group>"; };
 		B9583C982DBD8C8300F43550 /* Info.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Info.entitlements; sourceTree = "<group>"; };
 		B9583C992DBD8C8300F43550 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B9583C9A2DBD8C8300F43550 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -161,7 +159,6 @@
 				B9583C932DBD8C8300F43550 /* Detector.swift */,
 				B9583C942DBD8C8300F43550 /* Logger.swift */,
 				B9583C952DBD8C8300F43550 /* Recognizer.swift */,
-				B9583C962DBD8C8300F43550 /* Resources.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -233,9 +230,6 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
-				Base,
-				"zh-Hans",
-				"zh-Hant",
 			);
 			mainGroup = 87E192B62BAADE1200A87A4E;
 			productRefGroup = 87E192B62BAADE1200A87A4E;
@@ -275,7 +269,6 @@
 				B9583CAF2DBD8C8300F43550 /* Bundle+Extension.swift in Sources */,
 				B9583CB02DBD8C8300F43550 /* NSMenuItem+Extension.swift in Sources */,
 				B9583CB12DBD8C8300F43550 /* NSControl+Extension.swift in Sources */,
-				B9583CB22DBD8C8300F43550 /* Resources.swift in Sources */,
 				B9583CB32DBD8C8300F43550 /* GeminiService.swift in Sources */,
 				B9583CB42DBD8C8300F43550 /* NSPasteboard+Extension.swift in Sources */,
 				B9583CB52DBD8C8300F43550 /* NSObject+Extension.swift in Sources */,
@@ -313,7 +306,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -364,14 +357,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
 			};
@@ -382,7 +374,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -427,13 +419,12 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_STRICT_CONCURRENCY = complete;
 			};
 			name = Release;
@@ -468,7 +459,7 @@
 				MARKETING_VERSION = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -503,7 +494,7 @@
 				MARKETING_VERSION = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
