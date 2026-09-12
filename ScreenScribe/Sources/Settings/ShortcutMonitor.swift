@@ -1,14 +1,15 @@
 import AppKit
 import Carbon
+import Combine
 
 /// Actions that can be triggered by keyboard shortcuts
-enum ShortcutAction {
+enum ShortcutAction: Hashable {
     case visionOCR       // Apple Vision offline text extraction
     case defaultPrompt   // AI extraction with the user's default prompt
 }
 
 @MainActor
-final class ShortcutMonitor {
+final class ShortcutMonitor: ObservableObject {
     static let shared = ShortcutMonitor()
 
     private var textHotKeyRef: EventHotKeyRef?
@@ -21,145 +22,104 @@ final class ShortcutMonitor {
     private var textShortcut: KeyboardShortcut?
     private var defaultPromptShortcut: KeyboardShortcut?
     
-    struct KeyboardShortcut: Codable, Sendable {
-        var keyCode: Int
-        var modifiersRawValue: UInt
-        
+    struct KeyboardShortcut: Codable, Sendable, Equatable {
+        let keyCode: Int
+        let modifiersRawValue: UInt
+
+        static let supportedModifiers: NSEvent.ModifierFlags = [.command, .shift, .option, .control]
+
         var modifiers: NSEvent.ModifierFlags {
-            NSEvent.ModifierFlags(rawValue: modifiersRawValue)
+            NSEvent.ModifierFlags(rawValue: modifiersRawValue).intersection(Self.supportedModifiers)
         }
-        
+
         var carbonModifiers: UInt32 {
-            var carbonMods: UInt32 = 0
-            if modifiers.contains(.command) { carbonMods |= UInt32(cmdKey) }
-            if modifiers.contains(.shift) { carbonMods |= UInt32(shiftKey) }
-            if modifiers.contains(.option) { carbonMods |= UInt32(optionKey) }
-            if modifiers.contains(.control) { carbonMods |= UInt32(controlKey) }
-            return carbonMods
+            var result: UInt32 = 0
+            if modifiers.contains(.command) { result |= UInt32(cmdKey) }
+            if modifiers.contains(.shift) { result |= UInt32(shiftKey) }
+            if modifiers.contains(.option) { result |= UInt32(optionKey) }
+            if modifiers.contains(.control) { result |= UInt32(controlKey) }
+            return result
         }
-        
+
         var description: String {
-            var desc = ""
-            if modifiers.contains(.command) { desc += "⌘" }
-            if modifiers.contains(.shift) { desc += "⇧" }
-            if modifiers.contains(.option) { desc += "⌥" }
-            if modifiers.contains(.control) { desc += "⌃" }
-            
-            if let key = keyEquivalentString(for: keyCode) {
-                desc += key
-            }
-            return desc
+            var result = ""
+            if modifiers.contains(.control) { result += "⌃" }
+            if modifiers.contains(.option) { result += "⌥" }
+            if modifiers.contains(.shift) { result += "⇧" }
+            if modifiers.contains(.command) { result += "⌘" }
+            return result + (Self.specialKeys[keyCode]?.label ?? keyEquivalentCharacter.uppercased())
         }
-        
+
         var keyEquivalentCharacter: String {
-            // Convert key code to lowercase string
-            switch keyCode {
-            case kVK_ANSI_A: return "a"
-            case kVK_ANSI_B: return "b"
-            case kVK_ANSI_C: return "c"
-            case kVK_ANSI_D: return "d"
-            case kVK_ANSI_E: return "e"
-            case kVK_ANSI_F: return "f"
-            case kVK_ANSI_G: return "g"
-            case kVK_ANSI_H: return "h"
-            case kVK_ANSI_I: return "i"
-            case kVK_ANSI_J: return "j"
-            case kVK_ANSI_K: return "k"
-            case kVK_ANSI_L: return "l"
-            case kVK_ANSI_M: return "m"
-            case kVK_ANSI_N: return "n"
-            case kVK_ANSI_O: return "o"
-            case kVK_ANSI_P: return "p"
-            case kVK_ANSI_Q: return "q"
-            case kVK_ANSI_R: return "r"
-            case kVK_ANSI_S: return "s"
-            case kVK_ANSI_T: return "t"
-            case kVK_ANSI_U: return "u"
-            case kVK_ANSI_V: return "v"
-            case kVK_ANSI_W: return "w"
-            case kVK_ANSI_X: return "x"
-            case kVK_ANSI_Y: return "y"
-            case kVK_ANSI_Z: return "z"
-            case kVK_ANSI_0: return "0"
-            case kVK_ANSI_1: return "1"
-            case kVK_ANSI_2: return "2"
-            case kVK_ANSI_3: return "3"
-            case kVK_ANSI_4: return "4"
-            case kVK_ANSI_5: return "5"
-            case kVK_ANSI_6: return "6"
-            case kVK_ANSI_7: return "7"
-            case kVK_ANSI_8: return "8"
-            case kVK_ANSI_9: return "9"
-            case kVK_Return: return "\r"
-            case kVK_Tab: return "\t"
-            case kVK_Space: return " "
-            case kVK_Delete: return "\u{8}"
-            case kVK_LeftArrow: return "\u{1C}"
-            case kVK_RightArrow: return "\u{1D}"
-            case kVK_UpArrow: return "\u{1E}"
-            case kVK_DownArrow: return "\u{1F}"
-            default: return ""
-            }
+            if let special = Self.specialKeys[keyCode] { return special.character }
+            return Self.character(for: keyCode)
         }
-        
-        private func keyEquivalentString(for keyCode: Int) -> String? {
-            switch keyCode {
-            case kVK_ANSI_A: return "A"
-            case kVK_ANSI_S: return "S"
-            case kVK_ANSI_D: return "D"
-            case kVK_ANSI_F: return "F"
-            case kVK_ANSI_H: return "H"
-            case kVK_ANSI_G: return "G"
-            case kVK_ANSI_Z: return "Z"
-            case kVK_ANSI_X: return "X"
-            case kVK_ANSI_C: return "C"
-            case kVK_ANSI_V: return "V"
-            case kVK_ANSI_B: return "B"
-            case kVK_ANSI_Q: return "Q"
-            case kVK_ANSI_W: return "W"
-            case kVK_ANSI_E: return "E"
-            case kVK_ANSI_R: return "R"
-            case kVK_ANSI_Y: return "Y"
-            case kVK_ANSI_T: return "T"
-            case kVK_ANSI_1: return "1"
-            case kVK_ANSI_2: return "2"
-            case kVK_ANSI_3: return "3"
-            case kVK_ANSI_4: return "4"
-            case kVK_ANSI_6: return "6"
-            case kVK_ANSI_5: return "5"
-            case kVK_ANSI_9: return "9"
-            case kVK_ANSI_7: return "7"
-            case kVK_ANSI_8: return "8"
-            case kVK_ANSI_0: return "0"
-            case kVK_Return: return "⏎"
-            case kVK_Space: return "Space"
-            default: return nil
-            }
+
+        // Resolve physical keys using the current layout, including Å, Æ and Ø.
+        static func character(for keyCode: Int, inputSource: TISInputSource? = nil) -> String {
+            guard (0...127).contains(keyCode) else { return "" }
+            let source = inputSource ?? TISCopyCurrentKeyboardLayoutInputSource().takeRetainedValue()
+            guard let property = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return "" }
+            let data = Unmanaged<CFData>.fromOpaque(property).takeUnretainedValue()
+            guard let bytes = CFDataGetBytePtr(data) else { return "" }
+            let layout = UnsafeRawPointer(bytes).assumingMemoryBound(to: UCKeyboardLayout.self)
+            var deadKey: UInt32 = 0
+            var length = 0
+            var buffer = [UniChar](repeating: 0, count: 8)
+            let status = UCKeyTranslate(layout, UInt16(keyCode), UInt16(kUCKeyActionDisplay), 0,
+                                        UInt32(LMGetKbdType()), OptionBits(kUCKeyTranslateNoDeadKeysMask),
+                                        &deadKey, buffer.count, &length, &buffer)
+            guard status == noErr else { return "" }
+            return String(utf16CodeUnits: buffer, count: length).lowercased()
         }
-        
+
+        static let specialKeys: [Int: (label: String, character: String)] = {
+            var keys: [Int: (String, String)] = [
+                kVK_Return: ("↩", "\r"), kVK_Tab: ("⇥", "\t"), kVK_Space: ("Space", " "),
+                kVK_Delete: ("⌫", "\u{8}"), kVK_ForwardDelete: ("⌦", "\u{F728}"),
+                kVK_Escape: ("⎋", "\u{1B}"),
+                kVK_LeftArrow: ("←", "\u{F702}"), kVK_RightArrow: ("→", "\u{F703}"),
+                kVK_UpArrow: ("↑", "\u{F700}"), kVK_DownArrow: ("↓", "\u{F701}"),
+                kVK_Home: ("↖", "\u{F729}"), kVK_End: ("↘", "\u{F72B}"),
+                kVK_PageUp: ("⇞", "\u{F72C}"), kVK_PageDown: ("⇟", "\u{F72D}"),
+                kVK_ANSI_KeypadEnter: ("⌤", "\u{3}")
+            ]
+            let functionKeys = [kVK_F1, kVK_F2, kVK_F3, kVK_F4, kVK_F5, kVK_F6, kVK_F7,
+                                kVK_F8, kVK_F9, kVK_F10, kVK_F11, kVK_F12, kVK_F13,
+                                kVK_F14, kVK_F15, kVK_F16, kVK_F17, kVK_F18, kVK_F19, kVK_F20]
+            for (index, code) in functionKeys.enumerated() {
+                keys[code] = ("F\(index + 1)", String(UnicodeScalar(0xF704 + index)!))
+            }
+            return keys
+        }()
+
+        var validationError: String? {
+            guard (0...127).contains(keyCode), !keyEquivalentCharacter.isEmpty else {
+                return "This key cannot be used as a shortcut."
+            }
+            let isFunctionKey = Self.specialKeys[keyCode]?.label.hasPrefix("F") == true
+            return nil
+        }
+
         init(keyCode: Int, modifiers: NSEvent.ModifierFlags) {
             self.keyCode = keyCode
-            self.modifiersRawValue = modifiers.rawValue
+            modifiersRawValue = modifiers.intersection(Self.supportedModifiers).rawValue
         }
-        
-        enum CodingKeys: String, CodingKey {
-            case keyCode
-            case modifiersRawValue
-        }
-        
+
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            keyCode = try container.decode(Int.self, forKey: .keyCode)
-            modifiersRawValue = try container.decode(UInt.self, forKey: .modifiersRawValue)
-        }
-        
-        func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(keyCode, forKey: .keyCode)
-            try container.encode(modifiersRawValue, forKey: .modifiersRawValue)
+            let code = try container.decode(Int.self, forKey: .keyCode)
+            guard (0...127).contains(code) else {
+                throw DecodingError.dataCorruptedError(forKey: .keyCode, in: container, debugDescription: "Invalid key code")
+            }
+            self.init(keyCode: code, modifiers: NSEvent.ModifierFlags(rawValue: try container.decode(UInt.self, forKey: .modifiersRawValue)))
         }
     }
-    
+
+    @Published private(set) var registrationErrors: [ShortcutAction: String] = [:]
+    private var isMonitoring = false
+    private var isSuspended = false
+
     private init() {
         installEventHandler()
     }
@@ -184,8 +144,10 @@ final class ShortcutMonitor {
                                          &hotKeyID)
             
             guard status == noErr else { return status }
+            guard hotKeyID.signature == 0x4C544558 else { return OSStatus(eventNotHandledErr) }
             
             Task { @MainActor in
+                guard monitor.isMonitoring, !monitor.isSuspended else { return }
                 switch hotKeyID.id {
                 case 1: monitor.callback?(.visionOCR)
                 case 2: monitor.callback?(.defaultPrompt)
@@ -203,58 +165,53 @@ final class ShortcutMonitor {
     
     func startMonitoring(callback: @escaping (ShortcutAction) -> Void) {
         self.callback = callback
+        isMonitoring = true
         registerHotKeys()
     }
 
+    private func unregisterHotKeys() {
+        if let ref = textHotKeyRef { UnregisterEventHotKey(ref) }
+        if let ref = defaultPromptHotKeyRef { UnregisterEventHotKey(ref) }
+        textHotKeyRef = nil
+        defaultPromptHotKeyRef = nil
+    }
+
     func stopMonitoring() {
-        if let ref = textHotKeyRef {
-            UnregisterEventHotKey(ref)
-            textHotKeyRef = nil
-        }
-        if let ref = defaultPromptHotKeyRef {
-            UnregisterEventHotKey(ref)
-            defaultPromptHotKeyRef = nil
-        }
+        isMonitoring = false
+        unregisterHotKeys()
+    }
+
+    func suspendForRecording(_ suspended: Bool) {
+        isSuspended = suspended
+        registerHotKeys()
     }
 
     private func registerHotKeys() {
-        if let textShortcut = textShortcut {
-            if let currentRef = textHotKeyRef {
-                UnregisterEventHotKey(currentRef)
+        unregisterHotKeys()
+        registrationErrors = [:]
+        guard isMonitoring, !isSuspended else { return }
+        func register(_ shortcut: KeyboardShortcut?, action: ShortcutAction, id: EventHotKeyID) -> EventHotKeyRef? {
+            guard let shortcut else { return nil }
+            if let error = shortcut.validationError {
+                registrationErrors[action] = error
+                return nil
             }
-
             var ref: EventHotKeyRef?
-            RegisterEventHotKey(UInt32(textShortcut.keyCode),
-                              textShortcut.carbonModifiers,
-                              textHotKeyID,
-                              GetApplicationEventTarget(),
-                              0,
-                              &ref)
-            textHotKeyRef = ref
-        }
-
-        if let defaultPromptShortcut = defaultPromptShortcut {
-            if let currentRef = defaultPromptHotKeyRef {
-                UnregisterEventHotKey(currentRef)
+            let status = RegisterEventHotKey(UInt32(shortcut.keyCode), shortcut.carbonModifiers,
+                                            id, GetApplicationEventTarget(), 0, &ref)
+            if status != noErr {
+                registrationErrors[action] = "Could not register this shortcut. It may be used by macOS or another app (\(status))."
             }
-
-            var ref: EventHotKeyRef?
-            RegisterEventHotKey(UInt32(defaultPromptShortcut.keyCode),
-                              defaultPromptShortcut.carbonModifiers,
-                              defaultPromptHotKeyID,
-                              GetApplicationEventTarget(),
-                              0,
-                              &ref)
-            defaultPromptHotKeyRef = ref
+            return ref
         }
+        textHotKeyRef = register(textShortcut, action: .visionOCR, id: textHotKeyID)
+        defaultPromptHotKeyRef = register(defaultPromptShortcut, action: .defaultPrompt, id: defaultPromptHotKeyID)
     }
 
     func setShortcut(_ shortcut: KeyboardShortcut?, for action: ShortcutAction) {
         switch action {
-        case .visionOCR:
-            textShortcut = shortcut
-        case .defaultPrompt:
-            defaultPromptShortcut = shortcut
+        case .visionOCR: textShortcut = shortcut
+        case .defaultPrompt: defaultPromptShortcut = shortcut
         }
         registerHotKeys()
     }

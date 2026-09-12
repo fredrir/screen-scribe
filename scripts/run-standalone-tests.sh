@@ -64,3 +64,12 @@ run_swift_test \
   ScreenScribe/Sources/Logger.swift \
   -framework AppKit \
   -framework ScreenCaptureKit
+
+run_swift_test \
+  KeyboardShortcutTests \
+  Tests/KeyboardShortcutTests.swift \
+  ScreenScribe/Sources/Settings/ShortcutMonitor.swift \
+  ScreenScribe/Sources/Settings/SettingsManager.swift \
+  ScreenScribe/Sources/Config.swift \
+  -framework AppKit \
+  -framework Carbon

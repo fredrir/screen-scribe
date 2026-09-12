@@ -1,80 +1,100 @@
 import SwiftUI
 import Carbon
 
-private class EventMonitor {
-    var monitor: Any?
+@MainActor
+private final class ShortcutRecorder: ObservableObject {
+    @Published var action: ShortcutAction?
+    @Published var error: String?
+    private var monitor: Any?
 
-    init(eventMask: NSEvent.EventTypeMask, handler: @escaping (NSEvent) -> NSEvent?) {
-        self.monitor = NSEvent.addLocalMonitorForEvents(matching: eventMask, handler: handler)
+    func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        action = nil
+        ShortcutMonitor.shared.suspendForRecording(false)
     }
 
-    deinit {
-        if let monitor = self.monitor {
-            NSEvent.removeMonitor(monitor)
+    func start(_ action: ShortcutAction, save: @escaping (ShortcutMonitor.KeyboardShortcut?) -> String?) {
+        stop()
+        self.action = action
+        error = nil
+        ShortcutMonitor.shared.suspendForRecording(true)
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self else { return event }
+            guard event.type == .keyDown else {
+                self.stop()
+                return event
+            }
+            if event.isARepeat { return nil }
+            let shortcut = ShortcutMonitor.KeyboardShortcut(keyCode: Int(event.keyCode), modifiers: event.modifierFlags)
+            if shortcut.modifiers.isEmpty && event.keyCode == kVK_Escape {
+                self.stop()
+            } else if shortcut.modifiers.isEmpty && (event.keyCode == kVK_Delete || event.keyCode == kVK_ForwardDelete) {
+                self.error = save(nil)
+                self.stop()
+            } else if let error = shortcut.validationError {
+                self.error = error
+            } else if let error = save(shortcut) {
+                self.error = error
+            } else {
+                self.stop()
+            }
+            return nil
         }
     }
 }
 
-struct ShortcutRecorderButton: View {
+private struct ShortcutRecorderButton: View {
     let label: String
-    @Binding var shortcut: ShortcutMonitor.KeyboardShortcut?
-    @State private var isRecording = false
-    @State private var eventMonitor: EventMonitor?
+    let action: ShortcutAction
+    let shortcut: ShortcutMonitor.KeyboardShortcut?
+    let otherShortcut: ShortcutMonitor.KeyboardShortcut?
+    let save: (ShortcutMonitor.KeyboardShortcut?) -> Void
+    @ObservedObject var recorder: ShortcutRecorder
+    @ObservedObject private var monitor = ShortcutMonitor.shared
+
+    private var isRecording: Bool { recorder.action == action }
 
     var body: some View {
-        Button {
-            if isRecording {
-                eventMonitor = nil
-                isRecording = false
-            } else {
-                isRecording = true
-                startRecording()
-            }
-        } label: {
+        VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Text(isRecording ? "Recording..." : (shortcut?.description ?? "Click to Record"))
-                    .foregroundStyle(isRecording ? .secondary : .primary)
-                if !isRecording {
-                    Image(systemName: "keyboard")
-                        .foregroundStyle(.secondary)
+                Button {
+                    if isRecording {
+                        recorder.stop()
+                    } else {
+                        recorder.start(action) { candidate in
+                            if let candidate, candidate == otherShortcut {
+                                return "Shortcut assigned to another action"
+                            }
+                            save(candidate)
+                            return nil
+                        }
+                    }
+                } label: {
+                    Text(isRecording ? "Press shortcut…" : (shortcut?.description ?? "Not set"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .accessibilityLabel("\(label): \(isRecording ? "recording" : shortcut?.description ?? "not set")")
+                Button {
+                    recorder.stop()
+                    save(nil)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .disabled(shortcut == nil && !isRecording)
+                .help("Clear shortcut")
+                .accessibilityLabel("Clear \(label)")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 4)
-            .padding(.horizontal, 8)
-            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 6))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func startRecording() {
-        DispatchQueue.main.async {
-            self.eventMonitor = nil
-            self.eventMonitor = EventMonitor(eventMask: [.keyDown, .flagsChanged]) { event in
-                if event.type == .keyDown &&
-                   event.keyCode != kVK_Shift &&
-                   event.keyCode != kVK_Control &&
-                   event.keyCode != kVK_Option &&
-                   event.keyCode != kVK_Command &&
-                   event.keyCode != kVK_Function {
-                    let newShortcut = ShortcutMonitor.KeyboardShortcut(
-                        keyCode: Int(event.keyCode),
-                        modifiers: event.modifierFlags
-                    )
-                    shortcut = newShortcut
-                    isRecording = false
-                    self.eventMonitor = nil
-                    return nil
-                } else if event.type == .flagsChanged {
-                    return event
-                }
-                return event
+            if let error = isRecording ? recorder.error : monitor.registrationErrors[action] {
+                Text(error).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 }
 
 struct SettingsView: View {
+    @StateObject private var recorder = ShortcutRecorder()
     @StateObject private var settings = SettingsManager.shared
     @AppStorage("geminiAPIKey") private var apiKeyInput: String = ""
     @State private var isValidAPIKey: Bool = false
@@ -113,15 +133,11 @@ struct SettingsView: View {
                     }
 
                     if !apiKeyInput.isEmpty && !isValidAPIKey {
-                        Text("Invalid API key format. Key should start with 'AIza' followed by 35 characters.")
+                        Text("Invalid API key format")
                             .font(.caption)
                             .foregroundColor(.red)
                     }
 
-                    Text("Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .tint(.blue)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -134,43 +150,31 @@ struct SettingsView: View {
                         .pickerStyle(.menu)
                         .frame(width: 330)
                     }
-                    Text("Choose speed / cost trade-offs for AI extraction")
-                        .font(.caption).foregroundStyle(.secondary)
                 }
             } header: {
                 Text("API Configuration")
-            } footer: {
-                Text("The API key is required for AI-powered extraction")
-                    .foregroundStyle(.secondary)
             }
 
             Section {
                 LabeledContent("Text Shortcut:") {
                     ShortcutRecorderButton(
-                        label: "Text Shortcut",
-                        shortcut: Binding(
-                            get: { settings.textShortcut },
-                            set: { settings.textShortcut = $0 }
-                        )
+                        label: "Text Shortcut", action: .visionOCR,
+                        shortcut: settings.textShortcut, otherShortcut: settings.defaultPromptShortcut,
+                        save: { settings.textShortcut = $0 }, recorder: recorder
                     )
                     .frame(width: 200)
                 }
 
                 LabeledContent("Default Prompt:") {
                     ShortcutRecorderButton(
-                        label: "Default Prompt Shortcut",
-                        shortcut: Binding(
-                            get: { settings.defaultPromptShortcut },
-                            set: { settings.defaultPromptShortcut = $0 }
-                        )
+                        label: "Default Prompt Shortcut", action: .defaultPrompt,
+                        shortcut: settings.defaultPromptShortcut, otherShortcut: settings.textShortcut,
+                        save: { settings.defaultPromptShortcut = $0 }, recorder: recorder
                     )
                     .frame(width: 200)
                 }
             } header: {
                 Text("Keyboard Shortcuts")
-            } footer: {
-                Text("Text uses offline Vision OCR. Default Prompt uses your selected AI prompt.")
-                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -178,13 +182,17 @@ struct SettingsView: View {
                     .frame(height: 280)
             } header: {
                 Text("Prompts")
-            } footer: {
-                Text("Manage AI prompts for extraction. Set a default prompt for the keyboard shortcut.")
-                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .frame(width: 500, height: 700)
+        .onReceive(DistributedNotificationCenter.default().publisher(for: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String))) { _ in
+            recorder.objectWillChange.send()
+        }
+        .onDisappear { recorder.stop() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in recorder.stop() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in recorder.stop() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { _ in recorder.stop() }
         .onAppear {
             isValidAPIKey = validateAPIKey(apiKeyInput)
         }

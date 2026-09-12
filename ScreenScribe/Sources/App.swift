@@ -401,6 +401,7 @@ final class App: NSObject, NSApplicationDelegate {
     }
 
     @objc func menuWillOpen(_ menu: NSMenu) {
+        updateMenuItemKeyEquivalents()
         updateHistoryMenu()
         startDetection()
     }
