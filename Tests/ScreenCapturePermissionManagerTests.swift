@@ -17,7 +17,7 @@ struct ScreenCapturePermissionManagerTests {
             preflight: { allowed },
             requestAccess: {
                 requests += 1
-                throw NSError(domain: "com.apple.ScreenCaptureKit.SCStreamErrorDomain", code: -3801)
+                return false
             }
         )
 
@@ -43,10 +43,10 @@ struct ScreenCapturePermissionManagerTests {
 
         let successful = ScreenCapturePermissionManager(
             preflight: { false },
-            requestAccess: {}
+            requestAccess: { true }
         )
         let granted = await successful.requestPermissionInteractively()
-        expect(granted && successful.hasPermission, "Successful ScreenCaptureKit access must allow capture")
+        expect(granted && successful.hasPermission, "A successful system permission request must allow capture")
         successful.stopPolling()
 
         var finishRequest: CheckedContinuation<Void, Never>?
@@ -56,6 +56,7 @@ struct ScreenCapturePermissionManagerTests {
             requestAccess: {
                 concurrentRequests += 1
                 await withCheckedContinuation { finishRequest = $0 }
+                return true
             }
         )
         let first = Task { await concurrent.requestPermissionInteractively() }

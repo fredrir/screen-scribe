@@ -36,7 +36,7 @@ enum Localized {
   static let menuTitleClearHistory = String(localized: "Clear History", comment: "[Menu] Clear capture history")
   static let permissionAlertTitle = String(localized: "Screen Recording Permission", comment: "[Alert] Permission request title")
   static let permissionAlertMessage = String(localized: "ScreenScribe needs Screen Recording permission to capture screen regions.\n\nContinue to request permission now, or open System Settings to enable it manually.", comment: "[Alert] Permission request message")
-  static let permissionNotGrantedMessage = String(localized: "Screen Recording access is not available yet. Enable ScreenScribe in System Settings → Privacy & Security → Screen & System Audio Recording. If it is already enabled, quit ScreenScribe and run it again from Xcode or Finder.", comment: "[Alert] Screen recording access unavailable after request")
+  static let permissionNotGrantedMessage = String(localized: "macOS has not granted Screen Recording access to ScreenScribe. Open System Settings to review its access. If macOS asks you to quit and reopen the app, do so before capturing again.", comment: "[Alert] Screen recording access unavailable after request")
   static let permissionAlertButtonContinue = String(localized: "Continue", comment: "[Alert] Continue with permission request button")
   static let permissionAlertButtonOpenSystemSettings = String(localized: "Open System Settings", comment: "[Alert] Open system settings button")
   static let permissionAlertButtonCancel = String(localized: "Cancel", comment: "[Alert] Cancel permission request button")

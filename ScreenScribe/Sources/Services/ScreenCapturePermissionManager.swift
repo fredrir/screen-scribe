@@ -2,7 +2,6 @@ import Foundation
 import CoreGraphics
 import AppKit
 import Combine
-import ScreenCaptureKit
 
 @MainActor
 final class ScreenCapturePermissionManager: ObservableObject {
@@ -11,15 +10,13 @@ final class ScreenCapturePermissionManager: ObservableObject {
     @Published private(set) var hasPermission: Bool = false
 
     private let preflight: () -> Bool
-    private let requestAccess: () async throws -> Void
+    private let requestAccess: () async -> Bool
     private var permissionCheckTimer: Timer?
     private var isRequesting = false
 
     init(
         preflight: @escaping () -> Bool = { CGPreflightScreenCaptureAccess() },
-        requestAccess: @escaping () async throws -> Void = {
-            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        }
+        requestAccess: @escaping () async -> Bool = { CGRequestScreenCaptureAccess() }
     ) {
         self.preflight = preflight
         self.requestAccess = requestAccess
@@ -33,7 +30,7 @@ final class ScreenCapturePermissionManager: ObservableObject {
         }
     }
 
-    /// ScreenCaptureKit may show the system prompt. Never call it from polling.
+    /// Explicitly request access from the app process. Never call this from polling.
     @discardableResult
     func requestPermissionInteractively() async -> Bool {
         guard !isRequesting else { return false }
@@ -41,18 +38,16 @@ final class ScreenCapturePermissionManager: ObservableObject {
 
         isRequesting = true
         defer { isRequesting = false }
-        do {
-            try await requestAccess()
+        let granted = await requestAccess()
+        Logger.log(.info, "CGRequestScreenCaptureAccess returned \(granted)")
+        if granted || checkPermission() {
             hasPermission = true
             stopPolling()
             return true
-        } catch {
-            Logger.log(.error, "Screen capture access request failed: \(error.localizedDescription)")
-            // Access may have changed while the request was in flight.
-            if checkPermission() { return true }
-            startPolling()
-            return false
         }
+
+        startPolling()
+        return false
     }
 
     /// Read the current system status, including permission revoked in Settings.
