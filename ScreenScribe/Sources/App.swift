@@ -425,19 +425,29 @@ final class App: NSObject, NSApplicationDelegate {
                 return
             }
 
+            isRequestingPermission = true
+            defer { isRequestingPermission = false }
+
             guard showPermissionRequiredAlert() else {
                 return
             }
 
-            isRequestingPermission = true
             let granted = await permissionManager.requestPermissionInteractively()
-            isRequestingPermission = false
 
             if granted || permissionManager.checkPermission() {
                 onPermissionGranted()
                 await action()
             } else {
                 updateMenuForLimitedState()
+                let alert = NSAlert()
+                alert.messageText = Localized.permissionAlertTitle
+                alert.informativeText = Localized.permissionNotGrantedMessage
+                alert.addButton(withTitle: Localized.permissionAlertButtonOpenSystemSettings)
+                alert.addButton(withTitle: Localized.permissionAlertButtonCancel)
+                NSApp.activate(ignoringOtherApps: true)
+                if alert.runModal() == .alertFirstButtonReturn {
+                    permissionManager.openSystemSettings()
+                }
             }
         }
     }

@@ -36,6 +36,7 @@ enum Localized {
   static let menuTitleClearHistory = String(localized: "Clear History", comment: "[Menu] Clear capture history")
   static let permissionAlertTitle = String(localized: "Screen Recording Permission", comment: "[Alert] Permission request title")
   static let permissionAlertMessage = String(localized: "ScreenScribe needs Screen Recording permission to capture screen regions.\n\nContinue to request permission now, or open System Settings to enable it manually.", comment: "[Alert] Permission request message")
+  static let permissionNotGrantedMessage = String(localized: "Screen Recording access is not available yet. Enable ScreenScribe in System Settings → Privacy & Security → Screen & System Audio Recording. If it is already enabled, quit ScreenScribe and run it again from Xcode or Finder.", comment: "[Alert] Screen recording access unavailable after request")
   static let permissionAlertButtonContinue = String(localized: "Continue", comment: "[Alert] Continue with permission request button")
   static let permissionAlertButtonOpenSystemSettings = String(localized: "Open System Settings", comment: "[Alert] Open system settings button")
   static let permissionAlertButtonCancel = String(localized: "Cancel", comment: "[Alert] Cancel permission request button")
@@ -51,5 +52,5 @@ enum Icons {
 }
 
 enum Links {
-  static let github = "https://github.com/samuelz12/screen-scribe"
+  static let github = "https://github.com/fredrir/screen-scribe"
 }

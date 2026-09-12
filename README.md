@@ -4,10 +4,10 @@
 
 <img src="Assets/Icon.png" alt="ScreenScribe Icon" width="64"/>
 
-[![macOS](https://img.shields.io/badge/macOS-14.0%2B-brightgreen)](https://github.com/SamuelZ12/screen-scribe/releases/latest)
-[![GitHub all releases](https://img.shields.io/github/downloads/SamuelZ12/screen-scribe/total)](https://github.com/SamuelZ12/screen-scribe/releases)
-[![License](https://img.shields.io/github/license/SamuelZ12/screen-scribe)](LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/SamuelZ12/screen-scribe)](https://github.com/SamuelZ12/screen-scribe/releases/latest)
+[![macOS](https://img.shields.io/badge/macOS-14.0%2B-brightgreen)](https://github.com/fredrir/screen-scribe/releases/latest)
+[![GitHub all releases](https://img.shields.io/github/downloads/fredrir/screen-scribe/total)](https://github.com/fredrir/screen-scribe/releases)
+[![License](https://img.shields.io/github/license/fredrir/screen-scribe)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/fredrir/screen-scribe)](https://github.com/fredrir/screen-scribe/releases/latest)
 
 A macOS menu bar application for capturing screen regions and extracting content using AI-powered prompts. Features built-in support for LaTeX and Markdown extraction, plus the ability to create your own custom prompts.
 
@@ -51,11 +51,11 @@ Watch the application in action:
 
 ScreenScribe allows you to choose between the following Gemini models to optimize for your specific needs:
 
-| Model | Description |
-|-------|-------------|
-| **Gemini 3.7 Flash** | Best balance of speed, cost, and accuracy |
-| **Gemini 3.1 Pro** | Most capable model for complex content |
-| **Gemini 3.5 Flash-Lite** | Fastest and most cost-effective option |
+| Model                     | Description                               |
+| ------------------------- | ----------------------------------------- |
+| **Gemini 3.7 Flash**      | Best balance of speed, cost, and accuracy |
+| **Gemini 3.1 Pro**        | Most capable model for complex content    |
+| **Gemini 3.5 Flash-Lite** | Fastest and most cost-effective option    |
 
 > Note: Availability and quotas can change; see Google's current [usage limits](https://ai.google.dev/gemini-api/docs/rate-limits) for details.
 
@@ -63,7 +63,7 @@ ScreenScribe allows you to choose between the following Gemini models to optimiz
 
 ### Quick Install
 
-1. **Download** the latest `.dmg` from [Releases](https://github.com/SamuelZ12/screen-scribe/releases/latest)
+1. **Download** the latest `.dmg` from [Releases](https://github.com/fredrir/screen-scribe/releases/latest)
 2. **Open** the DMG and drag ScreenScribe to Applications
 3. **Right-click** the app and select "Open" (required for first launch)
 
@@ -138,7 +138,7 @@ If you prefer to build the application yourself:
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/SamuelZ12/screen-scribe.git
+    git clone https://github.com/fredrir/screen-scribe.git
     cd screen-scribe
     ```
 2.  **Open in Xcode:**

@@ -56,3 +56,11 @@ run_swift_test \
   ScreenScribe/Sources/Logger.swift \
   -framework AppKit \
   -framework ScreenCaptureKit
+
+run_swift_test \
+  ScreenCapturePermissionManagerTests \
+  Tests/ScreenCapturePermissionManagerTests.swift \
+  ScreenScribe/Sources/Services/ScreenCapturePermissionManager.swift \
+  ScreenScribe/Sources/Logger.swift \
+  -framework AppKit \
+  -framework ScreenCaptureKit

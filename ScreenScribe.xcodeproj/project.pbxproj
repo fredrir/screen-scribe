@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B9583CA72DBD8C8300F43550 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = B9583C9C2DBD8C8300F43550 /* Secrets.plist */; };
 		B9583CA82DBD8C8300F43550 /* Build.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = B9583C7B2DBD8C8300F43550 /* Build.xcconfig */; };
 		B9583CAC2DBD8C8300F43550 /* Screen Capture.aif in Resources */ = {isa = PBXBuildFile; fileRef = B9583C9B2DBD8C8300F43550 /* Screen Capture.aif */; };
 		B9583CAE2DBD8C8300F43550 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = B9583C9F2DBD8C8300F43550 /* LICENSE */; };
@@ -73,7 +72,6 @@
 		B9583C992DBD8C8300F43550 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B9583C9A2DBD8C8300F43550 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		B9583C9B2DBD8C8300F43550 /* Screen Capture.aif */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Screen Capture.aif"; sourceTree = "<group>"; };
-		B9583C9C2DBD8C8300F43550 /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
 		B9583C9E2DBD8C8300F43550 /* ScreenScribe.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = ScreenScribe.xcodeproj; sourceTree = "<group>"; };
 		B9583C9F2DBD8C8300F43550 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		B9583CCA2DBD935300F43550 /* ScreenScribe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScreenScribe.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -177,7 +175,6 @@
 				B9583C992DBD8C8300F43550 /* Info.plist */,
 				B9583C9A2DBD8C8300F43550 /* main.swift */,
 				B9583C9B2DBD8C8300F43550 /* Screen Capture.aif */,
-				B9583C9C2DBD8C8300F43550 /* Secrets.plist */,
 			);
 			path = ScreenScribe;
 			sourceTree = "<group>";
@@ -262,7 +259,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				F5B0C7647A784F30BB1B71D9 /* Assets.xcassets in Resources */,
-				B9583CA72DBD8C8300F43550 /* Secrets.plist in Resources */,
 				B9583CA82DBD8C8300F43550 /* Build.xcconfig in Resources */,
 				B9583CAC2DBD8C8300F43550 /* Screen Capture.aif in Resources */,
 				B9583CAE2DBD8C8300F43550 /* LICENSE in Resources */,
@@ -456,7 +452,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = "$(inherited)";
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = LC98XFTQS7;
+				DEVELOPMENT_TEAM = 48XF26BUN9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ScreenScribe/Info.plist;
@@ -491,7 +487,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = "$(inherited)";
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = LC98XFTQS7;
+				DEVELOPMENT_TEAM = 48XF26BUN9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ScreenScribe/Info.plist;

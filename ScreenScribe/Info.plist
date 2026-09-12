@@ -20,7 +20,7 @@
   <key>NSPrincipalClass</key>             <string>NSApplication</string>
 
   <!-- privacy -->
-  <key>NSPrivacyScreenCaptureUsageDescription</key>
+  <key>NSScreenCaptureUsageDescription</key>
   <string>ScreenScribe needs screen-recording permission to capture screenshots for content extraction.</string>
 </dict>
 </plist>
