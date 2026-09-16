@@ -96,61 +96,11 @@ private struct ShortcutRecorderButton: View {
 struct SettingsView: View {
     @StateObject private var recorder = ShortcutRecorder()
     @StateObject private var settings = SettingsManager.shared
-    @AppStorage("geminiAPIKey") private var apiKeyInput: String = ""
-    @State private var isValidAPIKey: Bool = false
-
-    private func validateAPIKey(_ key: String) -> Bool {
-        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.starts(with: "AIza") && trimmed.count == 39
-    }
 
     var body: some View {
         Form {
             Section {
-                VStack(alignment: .leading) {
-                    LabeledContent("Gemini API Key:") {
-                        HStack {
-                            SecureField("Enter your API key", text: $apiKeyInput)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 300)
-                                .onChange(of: apiKeyInput) { _, newValue in
-                                    let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                                    if newValue != trimmed {
-                                        apiKeyInput = trimmed
-                                    }
-                                    isValidAPIKey = validateAPIKey(trimmed)
-                                }
-                            if !apiKeyInput.isEmpty {
-                                if isValidAPIKey {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                } else {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.red)
-                                }
-                            }
-                        }
-                    }
-
-                    if !apiKeyInput.isEmpty && !isValidAPIKey {
-                        Text("Invalid API key format")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    LabeledContent("Gemini Model:") {
-                        Picker("", selection: $settings.selectedModel) {
-                            ForEach(Config.availableGeminiModels) { model in
-                                Text(model.label).tag(model.id)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 330)
-                    }
-                }
+                ProviderSettingsView()
             } header: {
                 Text("API Configuration")
             }
@@ -193,9 +143,6 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in recorder.stop() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in recorder.stop() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { _ in recorder.stop() }
-        .onAppear {
-            isValidAPIKey = validateAPIKey(apiKeyInput)
-        }
     }
 }
 

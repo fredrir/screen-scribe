@@ -20,22 +20,9 @@ final class SettingsManager: ObservableObject {
         }
     }
 
-    @Published var selectedModel: String {
-        didSet {
-            UserDefaults.standard.set(selectedModel, forKey: "geminiModel")
-        }
-    }
-
     private init() {
         textShortcut = ShortcutPreferences.load(forKey: "textShortcut", defaultKeyCode: kVK_ANSI_T)
         defaultPromptShortcut = ShortcutPreferences.load(forKey: "defaultPromptShortcut", defaultKeyCode: kVK_ANSI_L, legacyKey: "latexShortcut")
-
-        let storedModel = UserDefaults.standard.string(forKey: "geminiModel")
-        let resolvedModel = Config.resolvedGeminiModelID(from: storedModel)
-        selectedModel = resolvedModel
-        if let migratedModel = Config.persistedGeminiModelMigration(from: storedModel) {
-            UserDefaults.standard.set(migratedModel, forKey: "geminiModel")
-        }
 
         ShortcutMonitor.shared.setShortcut(textShortcut, for: .visionOCR)
         ShortcutMonitor.shared.setShortcut(defaultPromptShortcut, for: .defaultPrompt)

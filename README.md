@@ -28,23 +28,23 @@ Watch the application in action:
 * **Menu Bar Convenience:** Lives in your menu bar for quick access.
 * **Screen Capture:** Use global keyboard shortcuts or the menu bar to capture any portion of your screen.
 * **Text Extraction (Vision OCR):** Uses Apple's built-in Vision framework for fast, offline text recognition.
-* **AI-Powered Extraction:** Leverages the Google Gemini API with customizable prompts for intelligent content extraction.
+* **AI-Powered Extraction:** Works with Google Gemini and any OpenAI-compatible endpoint, with customizable prompts for intelligent content extraction.
 * **Built-in Prompts:**
   * **LaTeX:** Convert mathematical equations and formatted content to LaTeX code.
   * **Markdown:** Extract and convert content to clean Markdown format.
 * **Custom Prompts:** Create, edit, and save your own prompts for specialized extraction needs.
 * **Per-Prompt Output Format:** Configure how each prompt formats output (line breaks, spaces, or LaTeX newlines).
 * **Default Prompt:** Set any prompt as the default for quick keyboard access.
-* **Gemini Model Selection:** Choose between different Gemini models to optimize for speed, cost, or accuracy.
+* **Multiple Providers:** Gemini, or any OpenAI-compatible endpoint (OpenAI, OpenRouter, Groq, Ollama, LM Studio, self-hosted), switchable from the menu bar.
+* **Model Selection:** Free-text model identifier, or load the endpoint's `/models` list and pick from it.
 * **Clipboard Integration:** Automatically copies extracted content to your clipboard.
 * **Customizable Shortcuts:** Set global keyboard shortcuts for text extraction and your default prompt.
 * **Recent History:** Access recently captured results directly from the menu bar.
-* **API Key Management:** Securely enter and store your Google Gemini API key via the Settings panel.
 
 ## Requirements
 
 * **macOS:** Version 14.0 (Sonoma) or later.
-* **Google Gemini API Key:** Required for AI-powered extraction (LaTeX, Markdown, and custom prompts). Get a free key from [Google AI Studio](https://makersuite.google.com/app/apikey).
+* **AI Provider:** An API key for [Google AI Studio](https://makersuite.google.com/app/apikey), an OpenAI-compatible endpoint, or a local server such as [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai). Required for AI-powered extraction (LaTeX, Markdown, and custom prompts); local endpoints can run without a key.
 * **Xcode:** Version 16.0 or later (if building from source).
 
 ## Gemini API Models and Rate Limits
@@ -58,6 +58,58 @@ ScreenScribe allows you to choose between the following Gemini models to optimiz
 | **Gemini 3.5 Flash-Lite** | Fastest and most cost-effective option    |
 
 > Note: Availability and quotas can change; see Google's current [usage limits](https://ai.google.dev/gemini-api/docs/rate-limits) for details.
+
+When a Gemini model is retired, ScreenScribe migrates the stored model to its replacement automatically.
+
+## AI Providers
+
+Configured in **Settings > API Configuration**. `Google Gemini` speaks Google's `generateContent` API; `OpenAI-compatible` speaks `/chat/completions`.
+
+| Field | Value |
+| ----- | ----- |
+| Provider | Active provider; **+** adds a preset, **−** removes the selection |
+| Name | Label used in the menu bar switcher |
+| Type | `Google Gemini`, `OpenAI-compatible` |
+| Base URL | API root, e.g. `https://api.openai.com/v1` |
+| API Key | Gemini: required. OpenAI-compatible: optional |
+| Model | Any identifier the endpoint accepts; **Load Models** fills the picker from `/models` |
+
+### Base URL resolution
+
+| Base URL | Request URL |
+| -------- | ----------- |
+| `https://api.openai.com/v1` | `https://api.openai.com/v1/chat/completions` |
+| `https://api.openai.com/v1/` | `https://api.openai.com/v1/chat/completions` |
+| `https://api.groq.com/openai/v1` | `https://api.groq.com/openai/v1/chat/completions` |
+| `http://localhost:1234/v1/chat/completions` | unchanged |
+| `http://localhost:1234` | `http://localhost:1234/v1/chat/completions` |
+
+An API key on an OpenAI-compatible provider is sent as `Authorization: Bearer <key>`; empty keys omit the header.
+
+### Presets
+
+| Preset | Base URL | Example model |
+| ------ | -------- | ------------- |
+| Gemini | `https://generativelanguage.googleapis.com` | `gemini-3.7-flash` |
+| OpenAI | `https://api.openai.com/v1` | `gpt-4o` |
+| OpenRouter | `https://openrouter.ai/api/v1` | `openai/gpt-4o` |
+| Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| Ollama | `http://localhost:11434/v1` | `llama3.2` |
+| LM Studio | `http://localhost:1234/v1` | `local-model` |
+| Custom | — | — |
+
+Preset values are starting points; every field stays editable.
+
+### Local servers
+
+Plain-http endpoints on the local machine are allowed through the app's App Transport Security settings. The model must already be loaded in the local server.
+
+### Switching
+
+| Providers | Menu bar |
+| --------- | -------- |
+| 1 | No switcher |
+| 2+ | **Provider** submenu |
 
 ## Installation
 
@@ -94,7 +146,7 @@ ScreenScribe launches directly in your menu bar.
 On the first capture attempt, ScreenScribe will request **Screen Recording** permission.  
 If you deny it, you can enable it later in **System Settings > Privacy & Security > Screen Recording**.
 
-Gemini API key setup is optional and is configured from **Settings**.
+Provider setup is optional and is configured from **Settings**.
 
 ## Usage
 
@@ -113,8 +165,7 @@ Gemini API key setup is optional and is configured from **Settings**.
 **History:** Access recent captures from the menu bar under "Recent Captures"
 
 **Settings:**
-* **API Key:** Enter your Google Gemini API Key for AI-powered extraction
-* **Gemini Model:** Select your preferred model (speed vs. accuracy trade-off)
+* **Provider:** Choose the active provider, edit its base URL, API key and model, or add new ones
 * **Shortcuts:** Customize keyboard shortcuts
 * **Prompts:** Create custom prompts, edit copy formats, set your default
 
@@ -147,14 +198,18 @@ If you prefer to build the application yourself:
     ```
 3.  **Select Scheme:** Ensure the `ScreenScribe` scheme is selected.
 4.  **Build/Run:** Press `Cmd+B` to build or `Cmd+R` to run the application directly on your Mac. (Apps you build yourself typically don't trigger the same Gatekeeper warnings on your own machine).
-5.  **(Required for AI extraction)** **Configure API Key and Model:** After running the built app, open its Settings panel from the menu bar icon, enter your Google Gemini API key, and select your preferred model.
+5.  **(Required for AI extraction)** **Configure a provider:** After running the built app, open its Settings panel from the menu bar icon and add a provider — a Google Gemini API key, or the base URL and model of any OpenAI-compatible endpoint.
 
 ## Code Structure Overview
 
 * `ScreenScribe/Sources/App.swift`: Main application delegate, menu bar setup, capture initiation, and result handling.
 * `ScreenScribe/Sources/Recognizer.swift`: Handles text OCR using Apple's Vision framework.
 * `ScreenScribe/Sources/Models/Prompt.swift`: Prompt data model with built-in LaTeX and Markdown prompts.
+* `ScreenScribe/Sources/Models/AIProvider.swift`: Provider kinds, saved provider configuration, validation and presets.
+* `ScreenScribe/Sources/Services/AIProviderClient.swift`: Routes extraction and model lookups to the client matching the active provider.
 * `ScreenScribe/Sources/Services/GeminiService.swift`: Manages interaction with the Google Gemini API.
+* `ScreenScribe/Sources/Services/OpenAICompatibleService.swift`: Manages interaction with OpenAI-compatible endpoints.
+* `ScreenScribe/Sources/Services/ProviderStore.swift`: Stores providers and the active selection, and migrates the previous Gemini-only settings.
 * `ScreenScribe/Sources/Services/PromptManager.swift`: CRUD operations for prompts and persistence.
 * `ScreenScribe/Sources/Settings/`: Contains SwiftUI views for settings and prompt management.
 * `ScreenScribe/Sources/Extensions/`: Utility extensions for various AppKit/Foundation classes.

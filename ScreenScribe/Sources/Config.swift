@@ -38,10 +38,13 @@ struct GeminiModel: Identifiable {
 enum Config {
     static let defaultGeminiModelID = "gemini-3.7-flash"
 
-    /// The Gemini API key loaded from Keychain or Secrets.plist
+    /// API root used for the Gemini provider unless it is overridden in the provider settings.
+    static let defaultGeminiBaseURL = "https://generativelanguage.googleapis.com"
+
+    /// The Gemini API key loaded from UserDefaults or Secrets.plist
     @MainActor
-    static var geminiAPIKey: String {
-        if let key = UserDefaults.standard.string(forKey: "geminiAPIKey"), !key.isEmpty {
+    static func geminiAPIKey(defaults: UserDefaults = .standard) -> String {
+        if let key = defaults.string(forKey: "geminiAPIKey"), !key.isEmpty {
             return key
         }
         return ConfigurationManager.shared.value(for: "GEMINI_API_KEY") ?? ""
@@ -106,7 +109,17 @@ enum Config {
     }
     
     /// Get the Gemini API endpoint for the specified model
-    static func geminiEndpoint(for model: String) -> String {
-        return "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent"
+    static func geminiEndpoint(for model: String, baseURL: String = Config.defaultGeminiBaseURL) -> String {
+        let root = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedRoot: String
+        if root.isEmpty {
+            resolvedRoot = defaultGeminiBaseURL
+        } else if root.hasSuffix("/") {
+            resolvedRoot = String(root.dropLast())
+        } else {
+            resolvedRoot = root
+        }
+
+        return "\(resolvedRoot)/v1beta/models/\(model):generateContent"
     }
 }

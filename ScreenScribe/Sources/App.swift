@@ -130,7 +130,8 @@ final class App: NSObject, NSApplicationDelegate {
         return item
     }()
 
-    private let geminiService = GeminiService()
+    private let providerStore = ProviderStore.shared
+    private let providerClient = AIProviderClient()
     private static let soundPath = "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Screen Capture.aiff"
 
     private func rebuildMenu() {
@@ -157,12 +158,34 @@ final class App: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
         menu.addItem(historyItem)
+        if let providerItem = providerMenuItem() {
+            menu.addItem(.separator())
+            menu.addItem(providerItem)
+        }
         menu.addItem(.separator())
         menu.addItem(settingsItem)
         menu.addItem(quitItem)
 
         updateMenuItemKeyEquivalents()
         applyCaptureMenuState(permissionGranted: permissionManager.hasPermission)
+    }
+
+    /// Submenu for switching the active provider, shown once more than one exists.
+    private func providerMenuItem() -> NSMenuItem? {
+        guard providerStore.providers.count > 1 else { return nil }
+
+        let item = NSMenuItem(title: "Provider")
+        let submenu = NSMenu()
+        for provider in providerStore.providers {
+            let providerItem = NSMenuItem(title: provider.displayName)
+            providerItem.state = provider.id == providerStore.activeProviderID ? .on : .off
+            providerItem.addAction { [weak self] in
+                self?.providerStore.setActiveProvider(provider.id)
+            }
+            submenu.addItem(providerItem)
+        }
+        item.submenu = submenu
+        return item
     }
 
     private func setupMainMenu() {
@@ -262,6 +285,21 @@ final class App: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
 
         promptManager.$defaultPrompt
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.rebuildMenu()
+            }
+            .store(in: &cancellables)
+
+        // Observe provider changes so the menu reflects the active provider
+        providerStore.$providers
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.rebuildMenu()
+            }
+            .store(in: &cancellables)
+
+        providerStore.$activeProviderID
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.rebuildMenu()
@@ -526,8 +564,10 @@ final class App: NSObject, NSApplicationDelegate {
             return
         }
 
-        guard let apiKey = UserDefaults.standard.string(forKey: "geminiAPIKey"), !apiKey.isEmpty else {
-            NSAlert.showModalAlert(message: "Please set your Gemini API key in Settings")
+        let provider = providerStore.activeProvider
+        let providerIssues = provider.validationIssues
+        guard providerIssues.isEmpty else {
+            NSAlert.showModalAlert(message: "\(provider.displayName) is not ready:\n\n\(providerIssues.joined(separator: "\n"))")
             showSettings()
             return
         }
@@ -548,10 +588,10 @@ final class App: NSObject, NSApplicationDelegate {
             defer { isExtracting = false }
 
             do {
-                let extractedContent = try await geminiService.extractContent(
+                let extractedContent = try await providerClient.extractContent(
                     from: base64Image,
-                    apiKey: apiKey,
-                    promptContent: prompt.content
+                    promptContent: prompt.content,
+                    provider: provider
                 )
                 Logger.log(.info, "Raw content from API: \(extractedContent)")
 
@@ -573,8 +613,8 @@ final class App: NSObject, NSApplicationDelegate {
                 Logger.log(.info, "Copied content to clipboard (format: \(prompt.copyFormat.rawValue))")
                 showSuccessFeedback()
                 historyManager.addEntry(textToCopy, promptId: prompt.id, promptName: prompt.name)
-            } catch let error as GeminiAPIError {
-                handleGeminiError(error)
+            } catch let error as AIProviderError {
+                handleProviderError(error, provider: provider)
             } catch {
                 NSAlert.showModalAlert(message: "Failed to extract content: \(error.localizedDescription)")
                 Logger.log(.error, "Extraction failed: \(error)")
@@ -616,20 +656,25 @@ final class App: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func handleGeminiError(_ error: GeminiAPIError) {
+    private func handleProviderError(_ error: AIProviderError, provider: AIProviderConfiguration) {
+        let providerName = provider.displayName
         switch error {
         case .apiKeyMissing:
-            NSAlert.showModalAlert(message: "Gemini API key is missing. Please set it in Settings.")
+            NSAlert.showModalAlert(message: "\(providerName) has no API key. Please set it in Settings.")
             showSettings()
-        case .apiKeyInvalid:
-            NSAlert.showModalAlert(message: "Invalid Gemini API key. Please check Settings.")
+        case .apiKeyInvalid(let message):
+            let detail = message.map { "\n\n\($0)" } ?? ""
+            NSAlert.showModalAlert(message: "\(providerName) rejected the API key. Please check Settings.\(detail)")
             showSettings()
         case .apiError(let message):
-            NSAlert.showModalAlert(message: "Gemini API Error: \(message)")
+            NSAlert.showModalAlert(message: "\(providerName) API error: \(message)")
         case .requestFailed(let error):
             NSAlert.showModalAlert(message: "Network request failed: \(error.localizedDescription)")
         case .invalidResponse:
-            NSAlert.showModalAlert(message: "Received an invalid response from the API.")
+            NSAlert.showModalAlert(message: "Received an invalid response from \(providerName).")
+        case .invalidConfiguration(let message):
+            NSAlert.showModalAlert(message: "\(providerName) is not configured correctly: \(message)")
+            showSettings()
         case .imageProcessingFailed:
             NSAlert.showModalAlert(message: "Failed to process image data for API request.")
         case .networkError(let error):

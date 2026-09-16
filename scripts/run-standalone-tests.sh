@@ -31,6 +31,33 @@ run_swift_test \
   GeminiServiceRequestTests \
   Tests/GeminiServiceRequestTests.swift \
   ScreenScribe/Sources/Services/GeminiService.swift \
+  ScreenScribe/Sources/Services/AIProviderError.swift \
+  ScreenScribe/Sources/Services/APIRequestRunner.swift \
+  ScreenScribe/Sources/Config.swift
+
+run_swift_test \
+  OpenAICompatibleRequestTests \
+  Tests/OpenAICompatibleRequestTests.swift \
+  ScreenScribe/Sources/Services/OpenAICompatibleService.swift \
+  ScreenScribe/Sources/Services/AIProviderError.swift \
+  ScreenScribe/Sources/Services/APIRequestRunner.swift
+
+run_swift_test \
+  ProviderStoreTests \
+  Tests/ProviderStoreTests.swift \
+  ScreenScribe/Sources/Services/ProviderStore.swift \
+  ScreenScribe/Sources/Models/AIProvider.swift \
+  ScreenScribe/Sources/Config.swift
+
+run_swift_test \
+  ProviderRoutingTests \
+  Tests/ProviderRoutingTests.swift \
+  ScreenScribe/Sources/Services/AIProviderClient.swift \
+  ScreenScribe/Sources/Services/GeminiService.swift \
+  ScreenScribe/Sources/Services/OpenAICompatibleService.swift \
+  ScreenScribe/Sources/Services/AIProviderError.swift \
+  ScreenScribe/Sources/Services/APIRequestRunner.swift \
+  ScreenScribe/Sources/Models/AIProvider.swift \
   ScreenScribe/Sources/Config.swift
 
 run_swift_test \
