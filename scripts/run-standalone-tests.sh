@@ -16,7 +16,7 @@ run_swift_test() {
   shift
 
   echo "Running $binary_name"
-  swiftc "$@" -o "$tmpdir/$binary_name"
+  xcrun swiftc "$@" -o "$tmpdir/$binary_name"
   "$tmpdir/$binary_name"
 }
 

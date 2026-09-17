@@ -1,15 +1,15 @@
 import AppKit
-import ServiceManagement
-import Foundation
 import Carbon
-import os.log
-import CoreGraphics
 import Combine
+import CoreGraphics
+import Foundation
+import ServiceManagement
+import os.log
 
 struct HistoryEntry: Codable {
     let text: String
-    let promptId: UUID?        // nil for Vision OCR
-    let promptName: String     // "Text (OCR)" or prompt name
+    let promptId: UUID?  // nil for Vision OCR
+    let promptName: String  // "Text (OCR)" or prompt name
     let timestamp: Date
 
     var formattedDate: String {
@@ -27,7 +27,8 @@ class HistoryManager {
     private var entries: [HistoryEntry] = []
 
     func addEntry(_ text: String, promptId: UUID?, promptName: String) {
-        let entry = HistoryEntry(text: text, promptId: promptId, promptName: promptName, timestamp: Date())
+        let entry = HistoryEntry(
+            text: text, promptId: promptId, promptName: promptName, timestamp: Date())
         entries.insert(entry, at: 0)
         if entries.count > maxEntries {
             entries.removeLast()
@@ -52,7 +53,6 @@ final class App: NSObject, NSApplicationDelegate {
     private var settingsWindowController: SettingsWindowController?
     private let settingsManager = SettingsManager.shared
     private let historyManager = HistoryManager.shared
-    private let promptManager = PromptManager.shared
     private lazy var permissionManager = ScreenCapturePermissionManager.shared
     private let screenCaptureService = ScreenCaptureService()
 
@@ -118,7 +118,10 @@ final class App: NSObject, NSApplicationDelegate {
         // Temporarily disabled autosaveName to rule out caching issues after project rename
         // item.autosaveName = Bundle.main.bundleName
         item.button?.image = .with(symbolName: "text.viewfinder", pointSize: 15)
-        Logger.log(.info, "Status item button: \(String(describing: item.button)), image: \(String(describing: item.button?.image))")
+        Logger.log(
+            .info,
+            "Status item button: \(String(describing: item.button)), image: \(String(describing: item.button?.image))"
+        )
 
         let menu = NSMenu()
         menu.delegate = self
@@ -132,7 +135,8 @@ final class App: NSObject, NSApplicationDelegate {
 
     private let providerStore = ProviderStore.shared
     private let providerClient = AIProviderClient()
-    private static let soundPath = "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Screen Capture.aiff"
+    private static let soundPath =
+        "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Screen Capture.aiff"
 
     private func rebuildMenu() {
         guard let menu = statusItemMenu else { return }
@@ -144,11 +148,8 @@ final class App: NSObject, NSApplicationDelegate {
 
         // Prompts section
         promptMenuItems.removeAll()
-        for prompt in promptManager.prompts {
+        for prompt in Prompt.builtInPrompts {
             let item = NSMenuItem(title: prompt.name)
-            if prompt.isDefault {
-                item.state = .on
-            }
             item.addAction { [weak self] in
                 self?.initiateCapture(with: prompt)
             }
@@ -206,10 +207,15 @@ final class App: NSObject, NSApplicationDelegate {
         editMenu.addItem(NSMenuItem(title: "Undo", action: Selector(("undo:")), keyEquivalent: "z"))
         editMenu.addItem(NSMenuItem(title: "Redo", action: Selector(("redo:")), keyEquivalent: "Z"))
         editMenu.addItem(NSMenuItem.separator())
-        editMenu.addItem(NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
-        editMenu.addItem(NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
-        editMenu.addItem(NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
-        editMenu.addItem(NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        editMenu.addItem(
+            NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        editMenu.addItem(
+            NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        editMenu.addItem(
+            NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        editMenu.addItem(
+            NSMenuItem(
+                title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
 
         NSApp.mainMenu = mainMenu
     }
@@ -239,7 +245,8 @@ final class App: NSObject, NSApplicationDelegate {
         // Always show the status item
         Logger.log(.info, "About to access statusItem.isVisible")
         statusItem.isVisible = true
-        Logger.log(.info, "Status item isVisible set to true, actual value: \(self.statusItem.isVisible)")
+        Logger.log(
+            .info, "Status item isVisible set to true, actual value: \(self.statusItem.isVisible)")
         Logger.log(.info, "Status item button exists: \(self.statusItem.button != nil)")
 
         Logger.log(.info, "Proceeding with normal startup")
@@ -265,7 +272,7 @@ final class App: NSObject, NSApplicationDelegate {
 
         // Subscribe to permission changes
         permissionManager.$hasPermission
-            .dropFirst() // Skip the initial value
+            .dropFirst()  // Skip the initial value
             .receive(on: DispatchQueue.main)
             .sink { [weak self] granted in
                 if granted {
@@ -273,21 +280,6 @@ final class App: NSObject, NSApplicationDelegate {
                 } else {
                     self?.updateMenuForLimitedState()
                 }
-            }
-            .store(in: &cancellables)
-
-        // Observe prompt changes to rebuild menu (needed regardless of permission)
-        promptManager.$prompts
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.rebuildMenu()
-            }
-            .store(in: &cancellables)
-
-        promptManager.$defaultPrompt
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.rebuildMenu()
             }
             .store(in: &cancellables)
 
@@ -307,7 +299,6 @@ final class App: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
     }
 
-
     func applicationWillTerminate(_ notification: Notification) {
         ShortcutMonitor.shared.stopMonitoring()
         permissionManager.stopPolling()
@@ -320,7 +311,8 @@ final class App: NSObject, NSApplicationDelegate {
     private func showPermissionRequiredAlert() -> Bool {
         let alert = NSAlert()
         alert.messageText = "Screen Recording Permission"
-        alert.informativeText = "ScreenScribe needs Screen Recording permission to capture screen regions.\n\nContinue to request permission now, or open System Settings to enable it manually."
+        alert.informativeText =
+            "ScreenScribe needs Screen Recording permission to capture screen regions.\n\nContinue to request permission now, or open System Settings to enable it manually."
         alert.alertStyle = .informational
 
         alert.addButton(withTitle: "Continue")
@@ -343,14 +335,16 @@ final class App: NSObject, NSApplicationDelegate {
 
     private func applyCaptureMenuState(permissionGranted: Bool) {
         extractTextItem.isEnabled = true
-        extractTextItem.title = permissionGranted
+        extractTextItem.title =
+            permissionGranted
             ? "Extract Text"
             : "Extract Text (Permission Required)"
 
-        for (index, prompt) in promptManager.prompts.enumerated() {
+        for (index, prompt) in Prompt.builtInPrompts.enumerated() {
             guard index < promptMenuItems.count else { continue }
             promptMenuItems[index].isEnabled = true
-            promptMenuItems[index].title = permissionGranted
+            promptMenuItems[index].title =
+                permissionGranted
                 ? prompt.name
                 : prompt.name + " (Permission Required)"
         }
@@ -377,7 +371,7 @@ final class App: NSObject, NSApplicationDelegate {
             case .visionOCR:
                 self?.initiateCaptureForText()
             case .defaultPrompt:
-                self?.initiateCapture(with: PromptManager.shared.defaultPrompt)
+                self?.initiateCapture(with: Prompt.latexPrompt)
             }
         }
     }
@@ -416,8 +410,8 @@ final class App: NSObject, NSApplicationDelegate {
         }
 
         // Default prompt shortcut - apply to the default prompt's menu item
-        let defaultPromptId = promptManager.defaultPrompt.id
-        for (index, prompt) in promptManager.prompts.enumerated() {
+        let defaultPromptId = Prompt.latexPromptId
+        for (index, prompt) in Prompt.builtInPrompts.enumerated() {
             guard index < promptMenuItems.count else { continue }
             let item = promptMenuItems[index]
 
@@ -460,7 +454,9 @@ final class App: NSObject, NSApplicationDelegate {
             }
 
             guard !isRequestingPermission else {
-                Logger.log(.info, "Permission request already in progress; ignoring duplicate capture request")
+                Logger.log(
+                    .info,
+                    "Permission request already in progress; ignoring duplicate capture request")
                 return
             }
 
@@ -480,7 +476,8 @@ final class App: NSObject, NSApplicationDelegate {
                 updateMenuForLimitedState()
                 let alert = NSAlert()
                 alert.messageText = "Screen Recording Permission"
-                alert.informativeText = "macOS has not granted Screen Recording access to ScreenScribe. Open System Settings to review its access. If macOS asks you to quit and reopen the app, do so before capturing again."
+                alert.informativeText =
+                    "macOS has not granted Screen Recording access to ScreenScribe. Open System Settings to review its access. If macOS asks you to quit and reopen the app, do so before capturing again."
                 alert.addButton(withTitle: "Open System Settings")
                 alert.addButton(withTitle: "Cancel")
                 NSApp.activate(ignoringOtherApps: true)
@@ -567,14 +564,18 @@ final class App: NSObject, NSApplicationDelegate {
         let provider = providerStore.activeProvider
         let providerIssues = provider.validationIssues
         guard providerIssues.isEmpty else {
-            NSAlert.showModalAlert(message: "\(provider.displayName) is not ready:\n\n\(providerIssues.joined(separator: "\n"))")
+            NSAlert.showModalAlert(
+                message:
+                    "\(provider.displayName) is not ready:\n\n\(providerIssues.joined(separator: "\n"))"
+            )
             showSettings()
             return
         }
 
         guard let tiffData = image.tiffRepresentation,
-              let bitmapImage = NSBitmapImageRep(data: tiffData),
-              let imageData = bitmapImage.representation(using: .png, properties: [:]) else {
+            let bitmapImage = NSBitmapImageRep(data: tiffData),
+            let imageData = bitmapImage.representation(using: .png, properties: [:])
+        else {
             Logger.log(.error, "Failed to convert image to PNG data for extraction")
             NSAlert.showModalAlert(message: "Failed to process image data.")
             return
@@ -596,27 +597,18 @@ final class App: NSObject, NSApplicationDelegate {
                 Logger.log(.info, "Raw content from API: \(extractedContent)")
 
                 let cleanedContent = cleanExtractedString(extractedContent)
-                let textToCopy: String
-
-                // Apply copy format based on prompt settings
-                switch prompt.copyFormat {
-                case .spaces:
-                    textToCopy = cleanedContent.replacingOccurrences(of: "\n", with: " ")
-                case .latexNewlines:
-                    textToCopy = cleanedContent.replacingOccurrences(of: "\n", with: " \\\\\n")
-                case .lineBreaks:
-                    textToCopy = cleanedContent
-                }
+                let textToCopy = cleanedContent
 
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(textToCopy, forType: .string)
-                Logger.log(.info, "Copied content to clipboard (format: \(prompt.copyFormat.rawValue))")
+                Logger.log(.info, "Copied content to clipboard")
                 showSuccessFeedback()
                 historyManager.addEntry(textToCopy, promptId: prompt.id, promptName: prompt.name)
             } catch let error as AIProviderError {
                 handleProviderError(error, provider: provider)
             } catch {
-                NSAlert.showModalAlert(message: "Failed to extract content: \(error.localizedDescription)")
+                NSAlert.showModalAlert(
+                    message: "Failed to extract content: \(error.localizedDescription)")
                 Logger.log(.error, "Extraction failed: \(error)")
             }
         }
@@ -633,7 +625,8 @@ final class App: NSObject, NSApplicationDelegate {
 
         // Play screenshot sound
         if let soundURL = Bundle.main.url(forResource: "Screen Capture", withExtension: "aif"),
-           let screenshotSound = NSSound(contentsOf: soundURL, byReference: true) {
+            let screenshotSound = NSSound(contentsOf: soundURL, byReference: true)
+        {
             screenshotSound.play()
         } else {
             Logger.log(.error, "Could not load screenshot sound file from app bundle")
@@ -648,7 +641,7 @@ final class App: NSObject, NSApplicationDelegate {
 
             // Create new feedback restoration task
             currentFeedbackTask = Task { [weak self] in
-                try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+                try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 seconds
                 if !Task.isCancelled, let self = self {
                     button.image = self.originalStatusImage
                 }
@@ -660,11 +653,13 @@ final class App: NSObject, NSApplicationDelegate {
         let providerName = provider.displayName
         switch error {
         case .apiKeyMissing:
-            NSAlert.showModalAlert(message: "\(providerName) has no API key. Please set it in Settings.")
+            NSAlert.showModalAlert(
+                message: "\(providerName) has no API key. Please set it in Settings.")
             showSettings()
         case .apiKeyInvalid(let message):
             let detail = message.map { "\n\n\($0)" } ?? ""
-            NSAlert.showModalAlert(message: "\(providerName) rejected the API key. Please check Settings.\(detail)")
+            NSAlert.showModalAlert(
+                message: "\(providerName) rejected the API key. Please check Settings.\(detail)")
             showSettings()
         case .apiError(let message):
             NSAlert.showModalAlert(message: "\(providerName) API error: \(message)")
@@ -673,7 +668,8 @@ final class App: NSObject, NSApplicationDelegate {
         case .invalidResponse:
             NSAlert.showModalAlert(message: "Received an invalid response from \(providerName).")
         case .invalidConfiguration(let message):
-            NSAlert.showModalAlert(message: "\(providerName) is not configured correctly: \(message)")
+            NSAlert.showModalAlert(
+                message: "\(providerName) is not configured correctly: \(message)")
             showSettings()
         case .imageProcessingFailed:
             NSAlert.showModalAlert(message: "Failed to process image data for API request.")
@@ -703,7 +699,9 @@ final class App: NSObject, NSApplicationDelegate {
 
                 let submenu = NSMenu()
                 let previewText = entry.text.prefix(50)
-                let previewItem = NSMenuItem(title: previewText + (entry.text.count > 50 ? "..." : ""), action: nil, keyEquivalent: "")
+                let previewItem = NSMenuItem(
+                    title: previewText + (entry.text.count > 50 ? "..." : ""), action: nil,
+                    keyEquivalent: "")
                 previewItem.isEnabled = false
                 submenu.addItem(previewItem)
                 submenu.addItem(.separator())

@@ -1,11 +1,5 @@
 import Foundation
 
-/// A model the settings UI can offer for a provider.
-struct ProviderModelOption: Identifiable, Equatable {
-    let id: String
-    let label: String
-}
-
 /// Routes requests to the client matching a provider's protocol.
 @MainActor
 struct AIProviderClient {

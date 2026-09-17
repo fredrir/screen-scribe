@@ -138,6 +138,12 @@ struct AIProviderConfiguration: Codable, Identifiable, Equatable {
     }
 }
 
+/// A model option offered in the provider settings UI.
+struct ProviderModelOption: Identifiable, Equatable {
+    let id: String
+    let label: String
+}
+
 /// Template used by the settings UI to create a new provider entry.
 struct AIProviderPreset: Identifiable, Equatable {
     let id: String
@@ -148,6 +154,64 @@ struct AIProviderPreset: Identifiable, Equatable {
 
     func makeProvider() -> AIProviderConfiguration {
         AIProviderConfiguration(name: name, kind: kind, baseURL: baseURL, apiKey: "", model: model)
+    }
+
+    var websiteURL: URL? {
+        switch id {
+        case "gemini":
+            return URL(string: "https://aistudio.google.com/app/apikey")
+        case "openai":
+            return URL(string: "https://platform.openai.com/api-keys")
+        case "openrouter":
+            return URL(string: "https://openrouter.ai/keys")
+        case "groq":
+            return URL(string: "https://console.groq.com/keys")
+        default:
+            return nil
+        }
+    }
+
+    var isLocal: Bool {
+        id == "ollama" || id == "lmstudio"
+    }
+
+    var suggestedModels: [ProviderModelOption] {
+        switch id {
+        case "gemini":
+            return Config.availableGeminiModels.map {
+                ProviderModelOption(id: $0.id, label: "\($0.label)\($0.note.map { " (\($0))" } ?? "")")
+            }
+        case "openai":
+            return [
+                ProviderModelOption(id: "gpt-4o", label: "GPT-4o (Recommended)"),
+                ProviderModelOption(id: "gpt-4o-mini", label: "GPT-4o Mini (Fast)"),
+                ProviderModelOption(id: "o1", label: "o1 (Reasoning)"),
+                ProviderModelOption(id: "o3-mini", label: "o3-mini (Fast Reasoning)")
+            ]
+        case "openrouter":
+            return [
+                ProviderModelOption(id: "openai/gpt-4o", label: "OpenAI: GPT-4o"),
+                ProviderModelOption(id: "anthropic/claude-3.5-sonnet", label: "Anthropic: Claude 3.5 Sonnet"),
+                ProviderModelOption(id: "google/gemini-2.5-flash", label: "Google: Gemini 2.5 Flash"),
+                ProviderModelOption(id: "deepseek/deepseek-chat", label: "DeepSeek: V3")
+            ]
+        case "groq":
+            return [
+                ProviderModelOption(id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B Versatile"),
+                ProviderModelOption(id: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant")
+            ]
+        case "ollama":
+            return [
+                ProviderModelOption(id: "llama3.2", label: "llama3.2"),
+                ProviderModelOption(id: "llava", label: "llava (Vision)")
+            ]
+        case "lmstudio":
+            return [
+                ProviderModelOption(id: "local-model", label: "local-model")
+            ]
+        default:
+            return []
+        }
     }
 
     static let all: [AIProviderPreset] = [
@@ -202,3 +266,38 @@ struct AIProviderPreset: Identifiable, Equatable {
         ),
     ]
 }
+
+extension AIProviderConfiguration {
+    var matchingPreset: AIProviderPreset? {
+        if kind == .gemini {
+            return AIProviderPreset.all.first(where: { $0.id == "gemini" })
+        }
+        let url = baseURL.lowercased()
+        let n = name.lowercased()
+        if n == "openai" || url.contains("api.openai.com") {
+            return AIProviderPreset.all.first(where: { $0.id == "openai" })
+        }
+        if n == "openrouter" || url.contains("openrouter.ai") {
+            return AIProviderPreset.all.first(where: { $0.id == "openrouter" })
+        }
+        if n == "groq" || url.contains("api.groq.com") {
+            return AIProviderPreset.all.first(where: { $0.id == "groq" })
+        }
+        if n == "ollama" || url.contains("11434") {
+            return AIProviderPreset.all.first(where: { $0.id == "ollama" })
+        }
+        if n == "lm studio" || url.contains("1234") {
+            return AIProviderPreset.all.first(where: { $0.id == "lmstudio" })
+        }
+        return nil
+    }
+
+    var isLocal: Bool {
+        matchingPreset?.isLocal ?? false
+    }
+
+    var presetID: String {
+        matchingPreset?.id ?? "custom"
+    }
+}
+

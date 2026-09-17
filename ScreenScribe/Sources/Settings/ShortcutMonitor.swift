@@ -98,6 +98,9 @@ final class ShortcutMonitor: ObservableObject {
                 return "This key cannot be used as a shortcut."
             }
             let isFunctionKey = Self.specialKeys[keyCode]?.label.hasPrefix("F") == true
+            if modifiers.isEmpty && !isFunctionKey {
+                return "Shortcuts require at least one modifier key."
+            }
             return nil
         }
 

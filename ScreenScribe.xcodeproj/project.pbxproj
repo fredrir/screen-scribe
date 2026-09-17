@@ -35,9 +35,6 @@
 		B9583CC62DBD8C8300F43550 /* SMAppService+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9583C872DBD8C8300F43550 /* SMAppService+Extension.swift */; };
 		B9F54FE92F10866C0070D1C2 /* ScreenCapturePermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F54FE82F10866C0070D1C2 /* ScreenCapturePermissionManager.swift */; };
 		C1000001000000000000000A /* Prompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000001000000000000000B /* Prompt.swift */; };
-		C1000002000000000000000A /* PromptManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000002000000000000000B /* PromptManager.swift */; };
-		C1000003000000000000000A /* PromptEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000003000000000000000B /* PromptEditorView.swift */; };
-		C1000004000000000000000A /* PromptListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000004000000000000000B /* PromptListView.swift */; };
 		C1000006000000000000000A /* ScreenCaptureBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1000006000000000000000B /* ScreenCaptureBackend.swift */; };
 		D1000001000000000000000A /* AIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000001000000000000000B /* AIProvider.swift */; };
 		D1000002000000000000000A /* AIProviderError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000002000000000000000B /* AIProviderError.swift */; };
@@ -82,9 +79,6 @@
 		B9583CCA2DBD935300F43550 /* ScreenScribe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScreenScribe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9F54FE82F10866C0070D1C2 /* ScreenCapturePermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCapturePermissionManager.swift; sourceTree = "<group>"; };
 		C1000001000000000000000B /* Prompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prompt.swift; sourceTree = "<group>"; };
-		C1000002000000000000000B /* PromptManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptManager.swift; sourceTree = "<group>"; };
-		C1000003000000000000000B /* PromptEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptEditorView.swift; sourceTree = "<group>"; };
-		C1000004000000000000000B /* PromptListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptListView.swift; sourceTree = "<group>"; };
 		C1000006000000000000000B /* ScreenCaptureBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureBackend.swift; sourceTree = "<group>"; };
 		D1000001000000000000000B /* AIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProvider.swift; sourceTree = "<group>"; };
 		D1000002000000000000000B /* AIProviderError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderError.swift; sourceTree = "<group>"; };
@@ -148,7 +142,6 @@
 				D1000004000000000000000B /* OpenAICompatibleService.swift */,
 				D1000005000000000000000B /* AIProviderClient.swift */,
 				D1000006000000000000000B /* ProviderStore.swift */,
-				C1000002000000000000000B /* PromptManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -160,8 +153,6 @@
 				B9583C8D2DBD8C8300F43550 /* SettingsView.swift */,
 				B9583C8E2DBD8C8300F43550 /* SettingsWindowController.swift */,
 				B9583C8F2DBD8C8300F43550 /* ShortcutMonitor.swift */,
-				C1000003000000000000000B /* PromptEditorView.swift */,
-				C1000004000000000000000B /* PromptListView.swift */,
 				D1000007000000000000000B /* ProviderSettingsView.swift */,
 			);
 			path = Settings;
@@ -312,9 +303,6 @@
 				B9583CC52DBD8C8300F43550 /* NSMenu+Extension.swift in Sources */,
 				B9583CC62DBD8C8300F43550 /* SMAppService+Extension.swift in Sources */,
 				C1000001000000000000000A /* Prompt.swift in Sources */,
-				C1000002000000000000000A /* PromptManager.swift in Sources */,
-				C1000003000000000000000A /* PromptEditorView.swift in Sources */,
-				C1000004000000000000000A /* PromptListView.swift in Sources */,
 				C1000006000000000000000A /* ScreenCaptureBackend.swift in Sources */,
 				D1000001000000000000000A /* AIProvider.swift in Sources */,
 				D1000002000000000000000A /* AIProviderError.swift in Sources */,
@@ -462,7 +450,6 @@
 			baseConfigurationReference = B9583C7B2DBD8C8300F43550 /* Build.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = ScreenScribe/Info.entitlements;
 				CODE_SIGN_IDENTITY = "$(inherited)";
@@ -497,7 +484,6 @@
 			baseConfigurationReference = B9583C7B2DBD8C8300F43550 /* Build.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = ScreenScribe/Info.entitlements;
 				CODE_SIGN_IDENTITY = "$(inherited)";

@@ -1,55 +1,25 @@
 import Foundation
 
-/// Represents a customizable prompt for AI-powered extraction
-struct Prompt: Codable, Identifiable, Equatable {
+/// Represents one of the extraction prompts shipped with the app
+struct Prompt: Identifiable, Equatable {
     let id: UUID
-    var name: String
-    var content: String
-    var copyFormat: CopyFormat
-    let isBuiltIn: Bool
-    var isDefault: Bool
-    let createdAt: Date
+    let name: String
+    let content: String
 
-    enum CopyFormat: String, Codable, CaseIterable {
-        case lineBreaks = "lineBreaks"
-        case spaces = "spaces"
-        case latexNewlines = "latexNewlines"
-
-        var displayName: String {
-            switch self {
-            case .lineBreaks: return "Line Breaks"
-            case .spaces: return "Spaces"
-            case .latexNewlines: return "LaTeX \\\\"
-            }
-        }
-    }
-
-    init(
-        id: UUID = UUID(),
-        name: String,
-        content: String,
-        copyFormat: CopyFormat = .lineBreaks,
-        isBuiltIn: Bool = false,
-        isDefault: Bool = false,
-        createdAt: Date = Date()
-    ) {
+    init(id: UUID, name: String, content: String) {
         self.id = id
         self.name = name
         self.content = content
-        self.copyFormat = copyFormat
-        self.isBuiltIn = isBuiltIn
-        self.isDefault = isDefault
-        self.createdAt = createdAt
     }
 }
 
 // MARK: - Built-in Prompts
 
 extension Prompt {
-    /// Stable UUID for LaTeX built-in prompt
+    /// Stable UUID for the LaTeX prompt
     static let latexPromptId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
 
-    /// Stable UUID for Markdown built-in prompt
+    /// Stable UUID for the Markdown prompt
     static let markdownPromptId = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
 
     static let latexPrompt = Prompt(
@@ -86,11 +56,7 @@ extension Prompt {
             IMPORTANT OUTPUT RULES:
             - DO NOT wrap output in markdown fences (like ```latex).
             - Your entire response must consist solely of the extracted content.
-            """,
-        copyFormat: .lineBreaks,
-        isBuiltIn: true,
-        isDefault: true,
-        createdAt: Date.distantPast
+            """
     )
 
     static let markdownPrompt = Prompt(
@@ -113,13 +79,9 @@ extension Prompt {
             - Do not include explanations or commentary.
             - Do not wrap the output in additional markdown code fences.
             - Maintain the logical structure and hierarchy of the original content.
-            """,
-        copyFormat: .lineBreaks,
-        isBuiltIn: true,
-        isDefault: false,
-        createdAt: Date.distantPast
+            """
     )
 
-    /// Default built-in prompts that ship with the app
-    static let defaultBuiltInPrompts: [Prompt] = [latexPrompt, markdownPrompt]
+    /// Prompts that ship with the app
+    static let builtInPrompts: [Prompt] = [latexPrompt, markdownPrompt]
 }
