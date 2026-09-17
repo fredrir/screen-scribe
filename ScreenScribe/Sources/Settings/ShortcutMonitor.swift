@@ -4,8 +4,9 @@ import Combine
 
 /// Actions that can be triggered by keyboard shortcuts
 enum ShortcutAction: Hashable {
-    case visionOCR       // Apple Vision offline text extraction
-    case defaultPrompt   // AI extraction with the user's default prompt
+    case visionOCR   // Apple Vision offline text extraction
+    case latex       // AI extraction with the LaTeX prompt
+    case markdown    // AI extraction with the Markdown prompt
 }
 
 @MainActor
@@ -13,15 +14,19 @@ final class ShortcutMonitor: ObservableObject {
     static let shared = ShortcutMonitor()
 
     private var textHotKeyRef: EventHotKeyRef?
-    private var defaultPromptHotKeyRef: EventHotKeyRef?
+    private var latexHotKeyRef: EventHotKeyRef?
+    private var markdownHotKeyRef: EventHotKeyRef?
     private var textHotKeyID = EventHotKeyID(signature: 0x4C544558, // 'LTEX'
                                             id: 1)
-    private var defaultPromptHotKeyID = EventHotKeyID(signature: 0x4C544558,
+    private var latexHotKeyID = EventHotKeyID(signature: 0x4C544558,
                                              id: 2)
+    private var markdownHotKeyID = EventHotKeyID(signature: 0x4C544558,
+                                             id: 3)
     private var callback: ((ShortcutAction) -> Void)?
     private var textShortcut: KeyboardShortcut?
-    private var defaultPromptShortcut: KeyboardShortcut?
-    
+    private var latexShortcut: KeyboardShortcut?
+    private var markdownShortcut: KeyboardShortcut?
+
     struct KeyboardShortcut: Codable, Sendable, Equatable {
         let keyCode: Int
         let modifiersRawValue: UInt
@@ -126,17 +131,17 @@ final class ShortcutMonitor: ObservableObject {
     private init() {
         installEventHandler()
     }
-    
+
     private func installEventHandler() {
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
                                     eventKind: UInt32(kEventHotKeyPressed))
-        
+
         let selfPtr = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
-        
+
         InstallEventHandler(GetApplicationEventTarget(),
                           { (nextHandler, theEvent, userData) -> OSStatus in
             let monitor = Unmanaged<ShortcutMonitor>.fromOpaque(userData!).takeUnretainedValue()
-            
+
             var hotKeyID = EventHotKeyID()
             let status = GetEventParameter(theEvent,
                                          EventParamName(kEventParamDirectObject),
@@ -145,19 +150,20 @@ final class ShortcutMonitor: ObservableObject {
                                          MemoryLayout<EventHotKeyID>.size,
                                          nil,
                                          &hotKeyID)
-            
+
             guard status == noErr else { return status }
             guard hotKeyID.signature == 0x4C544558 else { return OSStatus(eventNotHandledErr) }
-            
+
             Task { @MainActor in
                 guard monitor.isMonitoring, !monitor.isSuspended else { return }
                 switch hotKeyID.id {
                 case 1: monitor.callback?(.visionOCR)
-                case 2: monitor.callback?(.defaultPrompt)
+                case 2: monitor.callback?(.latex)
+                case 3: monitor.callback?(.markdown)
                 default: break
                 }
             }
-            
+
             return noErr
         },
         1,
@@ -165,7 +171,7 @@ final class ShortcutMonitor: ObservableObject {
         selfPtr,
         nil)
     }
-    
+
     func startMonitoring(callback: @escaping (ShortcutAction) -> Void) {
         self.callback = callback
         isMonitoring = true
@@ -174,9 +180,11 @@ final class ShortcutMonitor: ObservableObject {
 
     private func unregisterHotKeys() {
         if let ref = textHotKeyRef { UnregisterEventHotKey(ref) }
-        if let ref = defaultPromptHotKeyRef { UnregisterEventHotKey(ref) }
+        if let ref = latexHotKeyRef { UnregisterEventHotKey(ref) }
+        if let ref = markdownHotKeyRef { UnregisterEventHotKey(ref) }
         textHotKeyRef = nil
-        defaultPromptHotKeyRef = nil
+        latexHotKeyRef = nil
+        markdownHotKeyRef = nil
     }
 
     func stopMonitoring() {
@@ -208,13 +216,15 @@ final class ShortcutMonitor: ObservableObject {
             return ref
         }
         textHotKeyRef = register(textShortcut, action: .visionOCR, id: textHotKeyID)
-        defaultPromptHotKeyRef = register(defaultPromptShortcut, action: .defaultPrompt, id: defaultPromptHotKeyID)
+        latexHotKeyRef = register(latexShortcut, action: .latex, id: latexHotKeyID)
+        markdownHotKeyRef = register(markdownShortcut, action: .markdown, id: markdownHotKeyID)
     }
 
     func setShortcut(_ shortcut: KeyboardShortcut?, for action: ShortcutAction) {
         switch action {
         case .visionOCR: textShortcut = shortcut
-        case .defaultPrompt: defaultPromptShortcut = shortcut
+        case .latex: latexShortcut = shortcut
+        case .markdown: markdownShortcut = shortcut
         }
         registerHotKeys()
     }

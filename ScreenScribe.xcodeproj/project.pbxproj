@@ -44,6 +44,8 @@
 		D1000006000000000000000A /* ProviderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000006000000000000000B /* ProviderStore.swift */; };
 		D1000007000000000000000A /* ProviderSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000007000000000000000B /* ProviderSettingsView.swift */; };
 		F5B0C7647A784F30BB1B71D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C128894D5D084D2FBAADA65C /* Assets.xcassets */; };
+		F1000002000000000000000A /* InjectionSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001000000000000000A /* InjectionSupport.swift */; };
+		F1000003000000000000000A /* InjectionLite in Frameworks */ = {isa = PBXBuildFile; productRef = F1000004000000000000000A /* InjectionLite */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -88,6 +90,8 @@
 		D1000006000000000000000B /* ProviderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderStore.swift; sourceTree = "<group>"; };
 		D1000007000000000000000B /* ProviderSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSettingsView.swift; sourceTree = "<group>"; };
 		C128894D5D084D2FBAADA65C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F1000001000000000000000A /* InjectionSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectionSupport.swift; sourceTree = "<group>"; };
+		F1000006000000000000000A /* Info-Debug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Info-Debug.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,6 +99,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1000003000000000000000A /* InjectionLite in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -154,6 +159,7 @@
 				B9583C8E2DBD8C8300F43550 /* SettingsWindowController.swift */,
 				B9583C8F2DBD8C8300F43550 /* ShortcutMonitor.swift */,
 				D1000007000000000000000B /* ProviderSettingsView.swift */,
+				F1000001000000000000000A /* InjectionSupport.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -180,6 +186,7 @@
 				C128894D5D084D2FBAADA65C /* Assets.xcassets */,
 				B9583C972DBD8C8300F43550 /* Sources */,
 				B9583C982DBD8C8300F43550 /* Info.entitlements */,
+				F1000006000000000000000A /* Info-Debug.entitlements */,
 				B9583C992DBD8C8300F43550 /* Info.plist */,
 				B9583C9A2DBD8C8300F43550 /* main.swift */,
 				B9583C9B2DBD8C8300F43550 /* Screen Capture.aif */,
@@ -216,6 +223,9 @@
 			);
 			dependencies = (
 			);
+			packageProductDependencies = (
+				F1000004000000000000000A /* InjectionLite */,
+			);
 			name = ScreenScribe;
 			productName = TextGrabber2;
 			productReference = B9583CCA2DBD935300F43550 /* ScreenScribe.app */;
@@ -251,6 +261,9 @@
 					ProductGroup = B9583CA42DBD8C8300F43550 /* Products */;
 					ProjectRef = B9583C9E2DBD8C8300F43550 /* ScreenScribe.xcodeproj */;
 				},
+			);
+			packageReferences = (
+				F1000005000000000000000A /* XCRemoteSwiftPackageReference "InjectionLite" */,
 			);
 			projectRoot = "";
 			targets = (
@@ -311,6 +324,7 @@
 				D1000005000000000000000A /* AIProviderClient.swift in Sources */,
 				D1000006000000000000000A /* ProviderStore.swift in Sources */,
 				D1000007000000000000000A /* ProviderSettingsView.swift in Sources */,
+				F1000002000000000000000A /* InjectionSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -451,7 +465,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
-				CODE_SIGN_ENTITLEMENTS = ScreenScribe/Info.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ScreenScribe/Info-Debug.entitlements;
 				CODE_SIGN_IDENTITY = "$(inherited)";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -459,7 +473,8 @@
 				CURRENT_PROJECT_VERSION = "$(inherited)";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 48XF26BUN9;
-				ENABLE_HARDENED_RUNTIME = YES;
+				EMIT_FRONTEND_COMMAND_LINES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ScreenScribe/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ScreenScribe;
@@ -472,6 +487,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = "$(inherited)";
+				OTHER_LDFLAGS = "$(inherited) -Xlinker -interposable";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -535,6 +551,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F1000004000000000000000A /* InjectionLite */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1000005000000000000000A /* XCRemoteSwiftPackageReference "InjectionLite" */;
+			productName = InjectionLite;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F1000005000000000000000A /* XCRemoteSwiftPackageReference "InjectionLite" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/johnno1962/InjectionLite.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.1.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = 87E192B72BAADE1200A87A4E /* Project object */;
 }

@@ -74,7 +74,7 @@ final class App: NSObject, NSApplicationDelegate {
     private var promptMenuItems: [NSMenuItem] = []
 
     private lazy var settingsItem: NSMenuItem = {
-        let item = NSMenuItem(title: "Settings")
+        let item = NSMenuItem(title: "Settings", action: nil, keyEquivalent: ",")
         item.addAction { [weak self] in
             self?.showSettings()
         }
@@ -115,8 +115,6 @@ final class App: NSObject, NSApplicationDelegate {
         Logger.log(.info, "Creating status item...")
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.behavior = .terminationOnRemoval
-        // Temporarily disabled autosaveName to rule out caching issues after project rename
-        // item.autosaveName = Bundle.main.bundleName
         item.button?.image = .with(symbolName: "text.viewfinder", pointSize: 15)
         Logger.log(
             .info,
@@ -192,11 +190,48 @@ final class App: NSObject, NSApplicationDelegate {
     private func setupMainMenu() {
         let mainMenu = NSMenu()
 
-        // Application menu (required even if empty)
+        // Application menu (macOS replaces the title with the app name)
         let appMenuItem = NSMenuItem()
         mainMenu.addItem(appMenuItem)
         let appMenu = NSMenu()
         appMenuItem.submenu = appMenu
+
+        let aboutItem = NSMenuItem(
+            title: "About ScreenScribe",
+            action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
+            keyEquivalent: "")
+        appMenu.addItem(aboutItem)
+        appMenu.addItem(.separator())
+
+        let settingsMenuItem = NSMenuItem(
+            title: "Settings…",
+            action: #selector(showSettings),
+            keyEquivalent: ",")
+        settingsMenuItem.target = self
+        appMenu.addItem(settingsMenuItem)
+        appMenu.addItem(.separator())
+
+        appMenu.addItem(
+            NSMenuItem(
+                title: "Hide ScreenScribe",
+                action: #selector(NSApplication.hide(_:)),
+                keyEquivalent: "h"))
+        appMenu.addItem(
+            NSMenuItem(
+                title: "Quit ScreenScribe",
+                action: #selector(NSApplication.terminate(_:)),
+                keyEquivalent: "q"))
+
+        // File menu provides the standard Close (⌘W) item for the settings window.
+        let fileMenuItem = NSMenuItem()
+        fileMenuItem.submenu = NSMenu(title: "File")
+        mainMenu.addItem(fileMenuItem)
+        let fileMenu = fileMenuItem.submenu!
+        fileMenu.addItem(
+            NSMenuItem(
+                title: "Close",
+                action: #selector(NSWindow.performClose(_:)),
+                keyEquivalent: "w"))
 
         // Edit menu with standard items
         let editMenuItem = NSMenuItem()
@@ -234,13 +269,22 @@ final class App: NSObject, NSApplicationDelegate {
             settingsWindowController = SettingsWindowController()
         }
         settingsWindowController?.showWindow(nil)
-        settingsWindowController?.window?.center()
         NSApp.activate(ignoringOtherApps: true)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger.log(.info, "applicationDidFinishLaunching started")
+        #if DEBUG
+        InjectionSupport.bootstrap()
+        #endif
         setupMainMenu()
+
+        // After a dev-mode hot reload, bring the settings window back where it was.
+        if CommandLine.arguments.contains("--restore-settings"),
+            UserDefaults.standard.bool(forKey: SettingsPersistence.windowWasOpenKey)
+        {
+            showSettings()
+        }
 
         // Always show the status item
         Logger.log(.info, "About to access statusItem.isVisible")
@@ -300,6 +344,8 @@ final class App: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // Normal quit: a later dev launch shouldn't restore the settings window.
+        UserDefaults.standard.set(false, forKey: SettingsPersistence.windowWasOpenKey)
         ShortcutMonitor.shared.stopMonitoring()
         permissionManager.stopPolling()
     }
@@ -370,8 +416,10 @@ final class App: NSObject, NSApplicationDelegate {
             switch action {
             case .visionOCR:
                 self?.initiateCaptureForText()
-            case .defaultPrompt:
+            case .latex:
                 self?.initiateCapture(with: Prompt.latexPrompt)
+            case .markdown:
+                self?.initiateCapture(with: Prompt.markdownPrompt)
             }
         }
     }
@@ -390,7 +438,14 @@ final class App: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        settingsManager.$defaultPromptShortcut
+        settingsManager.$latexShortcut
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateMenuItemKeyEquivalents()
+            }
+            .store(in: &cancellables)
+
+        settingsManager.$markdownShortcut
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateMenuItemKeyEquivalents()
@@ -409,23 +464,25 @@ final class App: NSObject, NSApplicationDelegate {
             extractTextItem.keyEquivalentModifierMask = []
         }
 
-        // Default prompt shortcut - apply to the default prompt's menu item
-        let defaultPromptId = Prompt.latexPromptId
+        // Prompt shortcuts (LaTeX and Markdown)
         for (index, prompt) in Prompt.builtInPrompts.enumerated() {
             guard index < promptMenuItems.count else { continue }
             let item = promptMenuItems[index]
 
-            if prompt.id == defaultPromptId {
-                item.state = .on
-                if let shortcut = settingsManager.defaultPromptShortcut {
-                    item.keyEquivalent = shortcut.keyEquivalentCharacter
-                    item.keyEquivalentModifierMask = shortcut.modifiers
-                } else {
-                    item.keyEquivalent = ""
-                    item.keyEquivalentModifierMask = []
-                }
+            let shortcut: ShortcutMonitor.KeyboardShortcut?
+            if prompt.id == Prompt.latexPromptId {
+                shortcut = settingsManager.latexShortcut
+            } else if prompt.id == Prompt.markdownPromptId {
+                shortcut = settingsManager.markdownShortcut
             } else {
-                item.state = .off
+                shortcut = nil
+            }
+
+            item.state = .off
+            if let shortcut {
+                item.keyEquivalent = shortcut.keyEquivalentCharacter
+                item.keyEquivalentModifierMask = shortcut.modifiers
+            } else {
                 item.keyEquivalent = ""
                 item.keyEquivalentModifierMask = []
             }

@@ -13,22 +13,30 @@ final class SettingsManager: ObservableObject {
         }
     }
 
-    @Published var defaultPromptShortcut: ShortcutMonitor.KeyboardShortcut? {
+    @Published var latexShortcut: ShortcutMonitor.KeyboardShortcut? {
         didSet {
-            ShortcutPreferences.save(
-                defaultPromptShortcut, forKey: "defaultPromptShortcut", defaults: .standard)
-            ShortcutMonitor.shared.setShortcut(defaultPromptShortcut, for: .defaultPrompt)
+            ShortcutPreferences.save(latexShortcut, forKey: "latexShortcut", defaults: .standard)
+            ShortcutMonitor.shared.setShortcut(latexShortcut, for: .latex)
+        }
+    }
+
+    @Published var markdownShortcut: ShortcutMonitor.KeyboardShortcut? {
+        didSet {
+            ShortcutPreferences.save(markdownShortcut, forKey: "markdownShortcut", defaults: .standard)
+            ShortcutMonitor.shared.setShortcut(markdownShortcut, for: .markdown)
         }
     }
 
     private init() {
 
         textShortcut = ShortcutPreferences.load(forKey: "textShortcut", defaultKeyCode: kVK_ANSI_T)
-        defaultPromptShortcut = ShortcutPreferences.load(
-            forKey: "defaultPromptShortcut", defaultKeyCode: kVK_ANSI_L, legacyKey: "latexShortcut")
+        latexShortcut = ShortcutPreferences.load(
+            forKey: "latexShortcut", defaultKeyCode: kVK_ANSI_L, legacyKey: "defaultPromptShortcut")
+        markdownShortcut = ShortcutPreferences.load(forKey: "markdownShortcut")
 
         ShortcutMonitor.shared.setShortcut(textShortcut, for: .visionOCR)
-        ShortcutMonitor.shared.setShortcut(defaultPromptShortcut, for: .defaultPrompt)
+        ShortcutMonitor.shared.setShortcut(latexShortcut, for: .latex)
+        ShortcutMonitor.shared.setShortcut(markdownShortcut, for: .markdown)
     }
 
 }
@@ -43,7 +51,7 @@ struct ShortcutPreferences {
     }
 
     static func load(
-        forKey key: String, defaultKeyCode: Int, legacyKey: String? = nil,
+        forKey key: String, defaultKeyCode: Int? = nil, legacyKey: String? = nil,
         defaults: UserDefaults = .standard
     ) -> ShortcutMonitor.KeyboardShortcut? {
         if let data = defaults.data(forKey: key) {
@@ -56,12 +64,13 @@ struct ShortcutPreferences {
         if defaults.object(forKey: key) == nil, let legacyKey,
             let data = defaults.data(forKey: legacyKey),
             let legacy = try? JSONDecoder().decode(
-                ShortcutMonitor.KeyboardShortcut.self, from: data)
+                ShortcutMonitor.KeyboardShortcut?.self, from: data)
         {
             save(legacy, forKey: key, defaults: defaults)
             defaults.removeObject(forKey: legacyKey)
             return legacy
         }
+        guard let defaultKeyCode else { return nil }
         return ShortcutMonitor.KeyboardShortcut(keyCode: defaultKeyCode, modifiers: .command)
     }
 }

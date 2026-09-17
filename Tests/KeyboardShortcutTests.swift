@@ -21,16 +21,18 @@ struct KeyboardShortcutTests {
                "Clearing survives loading settings again")
 
         let custom = Shortcut(keyCode: kVK_ANSI_LeftBracket, modifiers: [.command, .option])
-        ShortcutPreferences.save(custom, forKey: "latexShortcut", defaults: defaults)
-        expect(ShortcutPreferences.load(forKey: "defaultPromptShortcut", defaultKeyCode: kVK_ANSI_L, legacyKey: "latexShortcut", defaults: defaults) == custom,
-               "Legacy prompt shortcuts are migrated")
-        expect(defaults.object(forKey: "latexShortcut") == nil, "Legacy key is removed after saving its replacement")
-        expect(ShortcutPreferences.load(forKey: "defaultPromptShortcut", defaultKeyCode: kVK_ANSI_L, defaults: reopened) == custom,
+        ShortcutPreferences.save(custom, forKey: "defaultPromptShortcut", defaults: defaults)
+        expect(ShortcutPreferences.load(forKey: "latexShortcut", defaultKeyCode: kVK_ANSI_L, legacyKey: "defaultPromptShortcut", defaults: defaults) == custom,
+               "Legacy default-prompt shortcuts are migrated to the LaTeX binding")
+        expect(defaults.object(forKey: "defaultPromptShortcut") == nil, "Legacy key is removed after saving its replacement")
+        expect(ShortcutPreferences.load(forKey: "latexShortcut", defaultKeyCode: kVK_ANSI_L, defaults: reopened) == custom,
                "Migration is persisted")
-        ShortcutPreferences.save(nil, forKey: "defaultPromptShortcut", defaults: defaults)
-        ShortcutPreferences.save(custom, forKey: "latexShortcut", defaults: defaults)
-        expect(ShortcutPreferences.load(forKey: "defaultPromptShortcut", defaultKeyCode: kVK_ANSI_L, legacyKey: "latexShortcut", defaults: defaults) == nil,
+        ShortcutPreferences.save(nil, forKey: "latexShortcut", defaults: defaults)
+        ShortcutPreferences.save(custom, forKey: "defaultPromptShortcut", defaults: defaults)
+        expect(ShortcutPreferences.load(forKey: "latexShortcut", defaultKeyCode: kVK_ANSI_L, legacyKey: "defaultPromptShortcut", defaults: defaults) == nil,
                "Legacy settings cannot resurrect a cleared binding")
+        expect(ShortcutPreferences.load(forKey: "markdownShortcut", defaults: defaults) == nil,
+               "Markdown starts unassigned")
 
         let noisy = Shortcut(keyCode: kVK_ANSI_A, modifiers: [.command, .capsLock, .numericPad, .function])
         expect(noisy == Shortcut(keyCode: kVK_ANSI_A, modifiers: .command), "Non-shortcut flags are normalized for conflict checks")
@@ -61,11 +63,14 @@ struct KeyboardShortcutTests {
         monitor.setShortcut(binding, for: .visionOCR)
         monitor.startMonitoring { _ in }
         expect(monitor.registrationErrors.isEmpty, "Test binding registers successfully")
-        monitor.setShortcut(binding, for: .defaultPrompt)
-        expect(monitor.registrationErrors[.defaultPrompt] != nil, "Duplicate Carbon registration is reported")
+        monitor.setShortcut(binding, for: .latex)
+        expect(monitor.registrationErrors[.latex] != nil, "Duplicate Carbon registration is reported")
         monitor.setShortcut(nil, for: .visionOCR)
         expect(monitor.registrationErrors.isEmpty, "Clearing releases the binding for the other action")
-        monitor.setShortcut(nil, for: .defaultPrompt)
+        monitor.setShortcut(nil, for: .latex)
+        monitor.setShortcut(binding, for: .markdown)
+        expect(monitor.registrationErrors.isEmpty, "The Markdown shortcut registers once the binding is free")
+        monitor.setShortcut(nil, for: .markdown)
         var probe: EventHotKeyRef?
         let id = EventHotKeyID(signature: 0x54455354, id: 88)
         expect(RegisterEventHotKey(UInt32(binding.keyCode), binding.carbonModifiers, id, GetApplicationEventTarget(), 0, &probe) == noErr,

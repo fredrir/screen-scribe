@@ -101,6 +101,14 @@ struct AIProviderConfiguration: Codable, Identifiable, Equatable {
         model.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Whether requests to this provider are expected to carry an API key.
+    /// Cloud services and custom endpoints require one; local servers do not.
+    var requiresAPIKey: Bool {
+        if kind == .gemini { return true }
+        if let preset = matchingPreset, preset.isLocal { return false }
+        return true
+    }
+
     /// Problems that would make a request fail. Empty when the provider is ready to use.
     @MainActor
     var validationIssues: [String] {
@@ -114,7 +122,7 @@ struct AIProviderConfiguration: Codable, Identifiable, Equatable {
         } else if !Self.isUsableBaseURL(resolvedBaseURL) {
             issues.append("Base URL must be an http or https address.")
         }
-        if kind.requiresAPIKey && effectiveAPIKey.isEmpty {
+        if requiresAPIKey && effectiveAPIKey.isEmpty {
             issues.append("API key is required.")
         }
         if resolvedModel.isEmpty {

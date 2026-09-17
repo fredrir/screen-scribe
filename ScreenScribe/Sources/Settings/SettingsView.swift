@@ -22,6 +22,27 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
+/// Drives the preference-style toolbar tab selection from the window controller.
+@MainActor
+final class SettingsTabModel: ObservableObject {
+    @Published var selectedTab: SettingsTab {
+        didSet {
+            UserDefaults.standard.set(
+                selectedTab.rawValue, forKey: SettingsPersistence.windowTabKey)
+        }
+    }
+
+    init() {
+        if let raw = UserDefaults.standard.string(forKey: SettingsPersistence.windowTabKey),
+            let tab = SettingsTab(rawValue: raw)
+        {
+            selectedTab = tab
+        } else {
+            selectedTab = .provider
+        }
+    }
+}
+
 @MainActor
 final class ShortcutRecorder: ObservableObject {
     @Published var action: ShortcutAction?
@@ -76,7 +97,7 @@ struct ShortcutRecorderButton: View {
     let label: String
     let action: ShortcutAction
     let shortcut: ShortcutMonitor.KeyboardShortcut?
-    let otherShortcut: ShortcutMonitor.KeyboardShortcut?
+    let otherShortcuts: [ShortcutMonitor.KeyboardShortcut]
     let save: (ShortcutMonitor.KeyboardShortcut?) -> Void
     @ObservedObject var recorder: ShortcutRecorder
     @ObservedObject private var monitor = ShortcutMonitor.shared
@@ -91,7 +112,7 @@ struct ShortcutRecorderButton: View {
                         recorder.stop()
                     } else {
                         recorder.start(action) { candidate in
-                            if let candidate, candidate == otherShortcut {
+                            if let candidate, otherShortcuts.contains(candidate) {
                                 return "Shortcut assigned to another action"
                             }
                             save(candidate)
@@ -139,60 +160,82 @@ struct ShortcutRecorderButton: View {
     }
 }
 
+private struct ShortcutRow: View {
+    let title: String
+    let action: ShortcutAction
+    let shortcut: ShortcutMonitor.KeyboardShortcut?
+    let otherShortcuts: [ShortcutMonitor.KeyboardShortcut]
+    let save: (ShortcutMonitor.KeyboardShortcut?) -> Void
+    @ObservedObject var recorder: ShortcutRecorder
+
+    var body: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .fontWeight(.medium)
+            }
+            Spacer()
+            ShortcutRecorderButton(
+                label: title,
+                action: action,
+                shortcut: shortcut,
+                otherShortcuts: otherShortcuts,
+                save: save,
+                recorder: recorder
+            )
+            .frame(width: 170)
+        }
+    }
+}
+
 struct ShortcutsSettingsView: View {
     @ObservedObject var recorder: ShortcutRecorder
     @ObservedObject private var settings = SettingsManager.shared
     @ObservedObject private var providerStore = ProviderStore.shared
+    #if DEBUG
+        @ObservedObject private var injectionObserver = InjectionObserver.shared
+    #endif
 
     var body: some View {
         Form {
             Section {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Text Recognition (Vision OCR)")
-                                .fontWeight(.medium)
-                            Text(
-                                "Fast offline OCR using Apple Vision. Extracts plain text directly to clipboard without AI."
-                            )
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer()
-                        ShortcutRecorderButton(
-                            label: "Text Shortcut", action: .visionOCR,
-                            shortcut: settings.textShortcut,
-                            otherShortcut: settings.defaultPromptShortcut,
-                            save: { settings.textShortcut = $0 }, recorder: recorder
-                        )
-                        .frame(width: 170)
-                    }
+                ShortcutRow(
+                    title: "Extract Text",
+                    action: .visionOCR,
+                    shortcut: settings.textShortcut,
+                    otherShortcuts: [settings.latexShortcut, settings.markdownShortcut].compactMap {
+                        $0
+                    },
+                    save: { settings.textShortcut = $0 },
+                    recorder: recorder
+                )
 
-                    Divider()
+                Divider()
 
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Default AI Extraction")
-                                .fontWeight(.medium)
-                            Text(
-                                "Captures a screen region and extracts LaTeX using \(providerStore.activeProvider.displayName)."
-                            )
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer()
-                        ShortcutRecorderButton(
-                            label: "Default Prompt Shortcut", action: .defaultPrompt,
-                            shortcut: settings.defaultPromptShortcut,
-                            otherShortcut: settings.textShortcut,
-                            save: { settings.defaultPromptShortcut = $0 }, recorder: recorder
-                        )
-                        .frame(width: 170)
-                    }
-                }
-                .padding(.vertical, 4)
+                ShortcutRow(
+                    title: "LaTeX",
+
+                    action: .latex,
+                    shortcut: settings.latexShortcut,
+                    otherShortcuts: [settings.textShortcut, settings.markdownShortcut].compactMap {
+                        $0
+                    },
+                    save: { settings.latexShortcut = $0 },
+                    recorder: recorder
+                )
+
+                Divider()
+
+                ShortcutRow(
+                    title: "Markdown",
+                    action: .markdown,
+                    shortcut: settings.markdownShortcut,
+                    otherShortcuts: [settings.textShortcut, settings.latexShortcut].compactMap {
+                        $0
+                    },
+                    save: { settings.markdownShortcut = $0 },
+                    recorder: recorder
+                )
             } header: {
                 Text("Global Hotkeys")
             }
@@ -202,35 +245,22 @@ struct ShortcutsSettingsView: View {
 }
 
 struct SettingsView: View {
+    @ObservedObject var model: SettingsTabModel
     @StateObject private var recorder = ShortcutRecorder()
-    @State private var selectedTab: SettingsTab = .provider
+    #if DEBUG
+        @ObservedObject private var injectionObserver = InjectionObserver.shared
+    #endif
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Segmented Tab Picker
-            Picker("", selection: $selectedTab) {
-                ForEach(SettingsTab.allCases) { tab in
-                    Label(tab.title, systemImage: tab.icon).tag(tab)
-                }
+        Group {
+            switch model.selectedTab {
+            case .provider:
+                ProviderSettingsView()
+            case .shortcuts:
+                ShortcutsSettingsView(recorder: recorder)
             }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
-
-            Divider()
-
-            // Active Tab Content
-            Group {
-                switch selectedTab {
-                case .provider:
-                    ProviderSettingsView()
-                case .shortcuts:
-                    ShortcutsSettingsView(recorder: recorder)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .frame(minWidth: 520, minHeight: 460)
         .onReceive(
             DistributedNotificationCenter.default().publisher(
@@ -252,5 +282,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(model: SettingsTabModel())
 }

@@ -4,6 +4,9 @@ import SwiftUI
 @MainActor
 struct ProviderSettingsView: View {
     @ObservedObject private var store = ProviderStore.shared
+    #if DEBUG
+        @ObservedObject private var injectionObserver = InjectionObserver.shared
+    #endif
 
     @State private var models: [ProviderModelOption] = []
     @State private var isLoadingModels = false
@@ -46,12 +49,17 @@ struct ProviderSettingsView: View {
                 }
 
                 // API Key
-                if provider.kind.requiresAPIKey {
+                if provider.requiresAPIKey {
                     LabeledContent("API Key:") {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 8) {
-                                SecureField(apiKeyPlaceholder, text: stringBinding(for: \.apiKey))
-                                    .textFieldStyle(.roundedBorder)
+                                SecureField(
+                                    "API Key",
+                                    text: stringBinding(for: \.apiKey),
+                                    prompt: Text(apiKeyPlaceholder)
+                                )
+                                .labelsHidden()
+                                .textFieldStyle(.roundedBorder)
 
                                 if provider.kind == .gemini, !provider.resolvedAPIKey.isEmpty {
                                     Image(
@@ -68,12 +76,6 @@ struct ProviderSettingsView: View {
                                             : "Expected 39 characters starting with AIza")
                                 }
 
-                                if let url = provider.matchingPreset?.websiteURL {
-                                    Link("Get Key ↗", destination: url)
-                                        .font(.caption)
-                                        .buttonStyle(.link)
-                                        .help("Open developer portal to get an API key")
-                                }
                             }
 
                             if provider.kind == .gemini {
@@ -107,9 +109,15 @@ struct ProviderSettingsView: View {
 
                 // Server URL
                 if isLocalOrCustom {
-
-                    TextField(placeholderBaseURL, text: stringBinding(for: \.baseURL))
+                    LabeledContent("API Endpoint:") {
+                        TextField(
+                            "Server URL",
+                            text: stringBinding(for: \.baseURL),
+                            prompt: Text(placeholderBaseURL)
+                        )
+                        .labelsHidden()
                         .textFieldStyle(.roundedBorder)
+                    }
 
                 }
 
@@ -265,11 +273,9 @@ struct ProviderSettingsView: View {
         }
         if provider.name.lowercased().contains("groq") {
             return "gsk_..."
-        }
-        if provider.name.lowercased().contains("openrouter") {
+        } else {
             return "sk-or-..."
         }
-        return "Enter your API key"
     }
 
     private var customProviders: [AIProviderConfiguration] {
@@ -396,7 +402,7 @@ struct ProviderSettingsView: View {
     private func testConnection() async {
         testStatus = .testing
 
-        if provider.kind.requiresAPIKey && provider.effectiveAPIKey.isEmpty {
+        if provider.requiresAPIKey && provider.effectiveAPIKey.isEmpty {
             testStatus = .failure("API key is required.")
             return
         }
