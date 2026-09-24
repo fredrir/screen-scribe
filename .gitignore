@@ -73,3 +73,6 @@ TextGrabber2/Secrets.plist
 
 _antigravity/
 .agent/
+
+# Release artifacts
+dist/

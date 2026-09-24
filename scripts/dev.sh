@@ -15,7 +15,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "        🔨 Building ScreenScribe"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-./scripts/build.sh Debug
+./scripts/build-debug.sh
 
 pkill -x ScreenScribe 2>/dev/null || true
 for _ in {1..50}; do

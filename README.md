@@ -13,13 +13,23 @@
 ## Building from Source
 
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/fredrir/screen-scribe.git
-    cd screen-scribe
-    just build
-    just release
-    ```
+```bash
+git clone https://github.com/fredrir/screen-scribe.git
+cd screen-scribe
+cp .env.example .env
+xcrun notarytool store-credentials <APPLE_NOTARY_PROFILE> --apple-id <apple-id> --team-id <APPLE_TEAM_ID>
+```
+
+| Recipe | Output |
+|---|---|
+| `just build` | `dist/ScreenScribe-<version>-dev.dmg`, `~/Applications/ScreenScribe.app` |
+| `just deploy` | `dist/ScreenScribe-<version>.dmg` (notarized), `~/Applications/ScreenScribe.app` |
+
+| Env | Default |
+|---|---|
+| `APPLE_DEVELOPER_ID_APPLICATION` | first `Developer ID Application:` identity in Keychain |
+| `APPLE_TEAM_ID` | — |
+| `APPLE_NOTARY_PROFILE` | required by `just deploy` |
 
 ## Acknowledgments
 

@@ -11,7 +11,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🔨 Building ScreenScribe"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if ! ./scripts/build.sh Debug quiet; then
+if ! ./scripts/build-debug.sh quiet; then
   echo ""
   echo "❌ Build failed — keeping the previous instance running."
   exit 1

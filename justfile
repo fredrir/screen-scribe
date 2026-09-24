@@ -7,7 +7,7 @@ project := "ScreenScribe.xcodeproj"
 scheme := "ScreenScribe"
 dest := "platform=macOS"
 derived_data := "build/xcode"
-app_path := "build/xcode/Build/Products/Debug/ScreenScribe.app"
+app_path := home_directory() / "Applications/ScreenScribe.app"
 
 # Build once, launch, and inject Swift changes in-process (no relaunch).
 dev:
@@ -25,17 +25,13 @@ xcode:
 typecheck:
 	@swift build
 
-# Pretty, de-verbosed debug build.
-build:
-	@./scripts/build.sh Debug
+# Build, sign, package, and install ScreenScribe.app [ --no-install --no-package --adhoc ]
+build *args:
+	@./scripts/build.sh {{args}}
 
-# Pretty, de-verbosed release build.
-release:
-	@./scripts/build.sh Release
-
-# Build then launch the app.
-run: build
-	@open "{{app_path}}"
+# Build, sign, notarize, package, and install a Developer ID release [ --notary-profile --no-install ]
+deploy *args:
+	@./scripts/deploy.sh {{args}}
 
 # Standalone test suite.
 test:
