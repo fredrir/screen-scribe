@@ -11,25 +11,12 @@ struct AIProviderClient {
         openAIService = OpenAICompatibleService()
     }
 
-    /// The model a request for this provider should use, applying Gemini's model migration rules.
-    static func resolvedModel(for provider: AIProviderConfiguration) -> String {
-        if provider.resolvedModel.isEmpty {
-            return provider.kind.defaultModel
-        }
-        switch provider.kind {
-        case .gemini:
-            return Config.resolvedGeminiModelID(from: provider.resolvedModel)
-        case .openAICompatible:
-            return provider.resolvedModel
-        }
-    }
-
     func extractContent(
         from base64Image: String,
         promptContent: String,
         provider: AIProviderConfiguration
     ) async throws -> String {
-        let model = Self.resolvedModel(for: provider)
+        let model = provider.resolvedModel
         let baseURL = provider.resolvedBaseURL.isEmpty ? provider.kind.defaultBaseURL : provider.resolvedBaseURL
         let apiKey = provider.effectiveAPIKey
 
@@ -53,15 +40,16 @@ struct AIProviderClient {
         }
     }
 
-    /// Models offered in the settings UI: a bundled catalog for Gemini, a network lookup otherwise.
-    func availableModels(for provider: AIProviderConfiguration) async throws -> [ProviderModelOption] {
+    /// The provider's own model list, narrowed to vision models when the provider reports them.
+    func availableModels(for provider: AIProviderConfiguration) async throws -> [String] {
+        let baseURL = provider.resolvedBaseURL.isEmpty ? provider.kind.defaultBaseURL : provider.resolvedBaseURL
+        let apiKey = provider.effectiveAPIKey
+
         switch provider.kind {
         case .gemini:
-            return Config.availableGeminiModels.map { ProviderModelOption(id: $0.id, label: $0.label) }
+            return try await geminiService.fetchModels(apiKey: apiKey, baseURL: baseURL)
         case .openAICompatible:
-            let baseURL = provider.resolvedBaseURL.isEmpty ? provider.kind.defaultBaseURL : provider.resolvedBaseURL
-            return try await openAIService.fetchModels(baseURL: baseURL, apiKey: provider.effectiveAPIKey)
-                .map { ProviderModelOption(id: $0, label: $0) }
+            return try await openAIService.fetchModels(baseURL: baseURL, apiKey: apiKey)
         }
     }
 }

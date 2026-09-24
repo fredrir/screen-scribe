@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Lets the user configure the active AI provider, credentials, and model in a clean, responsive layout.
 @MainActor
 struct ProviderSettingsView: View {
     @ObservedObject private var store = ProviderStore.shared
@@ -8,11 +7,15 @@ struct ProviderSettingsView: View {
         @ObservedObject private var injectionObserver = InjectionObserver.shared
     #endif
 
-    @State private var models: [ProviderModelOption] = []
+    @State private var models: [String] = []
     @State private var isLoadingModels = false
     @State private var modelError: String?
     @State private var isCustomModelActive: Bool = false
     @State private var testStatus: TestStatus?
+    @State private var nameDraft = ""
+    @State private var nameDraftProviderID: UUID?
+    @FocusState private var isNameFocused: Bool
+    @State private var providerPendingDeletion: AIProviderConfiguration?
 
     private enum TestStatus: Equatable {
         case testing
@@ -25,7 +28,6 @@ struct ProviderSettingsView: View {
     var body: some View {
         Form {
             Section {
-                // Unified Provider Selection
                 LabeledContent("Provider:") {
                     Picker("", selection: providerSelection) {
                         Section("Cloud Services") {
@@ -48,7 +50,31 @@ struct ProviderSettingsView: View {
                     .labelsHidden()
                 }
 
-                // API Key
+                if provider.isCustom {
+                    LabeledContent("Name:") {
+                        HStack(spacing: 8) {
+                            TextField(
+                                "Name",
+                                text: $nameDraft,
+                                prompt: Text(AIProviderPreset.custom.name)
+                            )
+                            .labelsHidden()
+                            .textFieldStyle(.roundedBorder)
+                            .focused($isNameFocused)
+                            .onSubmit(commitNameDraft)
+
+                            Button {
+                                providerPendingDeletion = provider
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(store.providers.count <= 1)
+                            .help("Delete this endpoint")
+                        }
+                    }
+                }
+
                 if provider.requiresAPIKey {
                     LabeledContent("API Key:") {
                         VStack(alignment: .leading, spacing: 4) {
@@ -96,7 +122,7 @@ struct ProviderSettingsView: View {
                             }
                         }
                     }
-                } else if provider.matchingPreset?.isLocal == true {
+                } else if provider.isLocal {
                     LabeledContent("API Key:") {
                         HStack {
                             Text("No API key required for local servers.")
@@ -107,7 +133,6 @@ struct ProviderSettingsView: View {
                     }
                 }
 
-                // Server URL
                 if isLocalOrCustom {
                     LabeledContent("API Endpoint:") {
                         TextField(
@@ -121,62 +146,48 @@ struct ProviderSettingsView: View {
 
                 }
 
-                // Model Selection
                 LabeledContent("Model:") {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            if !availableModelOptions.isEmpty && !isCustomModelActive {
-                                Picker("", selection: modelPickerBinding) {
-                                    ForEach(availableModelOptions) { option in
-                                        Text(option.label).tag(option.id)
-                                    }
-                                    Divider()
-                                    Text("Custom Model…").tag("__custom__")
+                    HStack(spacing: 8) {
+                        if !models.isEmpty && !isCustomModelActive {
+                            Picker("", selection: modelPickerBinding) {
+                                if provider.resolvedModel.isEmpty {
+                                    Text("Select a model").tag("")
                                 }
-                                .labelsHidden()
+                                ForEach(modelOptions, id: \.self) { model in
+                                    Text(model).tag(model)
+                                }
+                                Divider()
+                                Text("Custom Model…").tag(Self.customModelTag)
+                            }
+                            .labelsHidden()
+                        } else {
+                            TextField("Model identifier", text: stringBinding(for: \.model))
+                                .textFieldStyle(.roundedBorder)
+
+                            if !models.isEmpty {
+                                Button("Show List") {
+                                    isCustomModelActive = false
+                                }
+                                .buttonStyle(.borderless)
+                                .font(.caption)
+                            }
+                        }
+
+                        Button {
+                            Task { await loadModels() }
+                        } label: {
+                            if isLoadingModels {
+                                ProgressView().controlSize(.small)
                             } else {
-                                TextField("Model identifier", text: stringBinding(for: \.model))
-                                    .textFieldStyle(.roundedBorder)
-
-                                if !availableModelOptions.isEmpty {
-                                    Button("Presets") {
-                                        isCustomModelActive = false
-                                        if let first = availableModelOptions.first?.id {
-                                            var updated = provider
-                                            updated.model = first
-                                            store.update(updated)
-                                        }
-                                    }
-                                    .buttonStyle(.borderless)
-                                    .font(.caption)
-                                }
+                                Image(systemName: "arrow.clockwise")
                             }
-
-                            // Refresh button to fetch models from server
-                            Button {
-                                Task { await loadModels() }
-                            } label: {
-                                if isLoadingModels {
-                                    ProgressView().controlSize(.small)
-                                } else {
-                                    Image(systemName: "arrow.clockwise")
-                                }
-                            }
-                            .buttonStyle(.borderless)
-                            .disabled(isLoadingModels || provider.resolvedBaseURL.isEmpty)
-                            .help("Fetch models from server")
                         }
-
-                        if isCustomModelActive {
-                            TextField(
-                                "Enter custom model identifier", text: stringBinding(for: \.model)
-                            )
-                            .textFieldStyle(.roundedBorder)
-                        }
+                        .buttonStyle(.borderless)
+                        .disabled(isLoadingModels || !canLoadModels)
+                        .help("Reload models from the provider")
                     }
                 }
 
-                // MARK: - 5. Test Connection & Feedback
                 HStack(spacing: 12) {
                     Button {
                         Task { await testConnection() }
@@ -232,17 +243,34 @@ struct ProviderSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .confirmationDialog(
+            "Delete \"\(providerPendingDeletion?.displayName ?? "")\"?",
+            isPresented: isConfirmingDeletion,
+            presenting: providerPendingDeletion
+        ) { pending in
+            Button("Delete", role: .destructive) {
+                store.remove(id: pending.id)
+            }
+        } message: { _ in
+            Text("Its endpoint URL, API key and model will be removed.")
+        }
         .onChange(of: store.activeProviderID) { _, _ in
+            commitNameDraft()
             resetModelList()
             testStatus = nil
-            syncCustomModelState()
         }
-        .onAppear {
-            syncCustomModelState()
+        .onChange(of: isNameFocused) { _, isFocused in
+            if !isFocused { commitNameDraft() }
+        }
+        .onAppear(perform: loadNameDraft)
+        .onDisappear(perform: commitNameDraft)
+        .task(id: modelListSource) {
+            guard canLoadModels else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            await loadModels()
         }
     }
-
-    // MARK: - Helpers
 
     private var isTestingConnection: Bool {
         if case .testing = testStatus { return true }
@@ -250,8 +278,26 @@ struct ProviderSettingsView: View {
     }
 
     private var isLocalOrCustom: Bool {
-        provider.matchingPreset?.isLocal == true || provider.matchingPreset == nil
-            || provider.matchingPreset?.id == "custom"
+        provider.isLocal || provider.isCustom
+    }
+
+    private var isConfirmingDeletion: Binding<Bool> {
+        Binding(
+            get: { providerPendingDeletion != nil },
+            set: { if !$0 { providerPendingDeletion = nil } }
+        )
+    }
+
+    private func loadNameDraft() {
+        nameDraft = provider.name
+        nameDraftProviderID = provider.id
+    }
+
+    private func commitNameDraft() {
+        if let id = nameDraftProviderID {
+            store.rename(id: id, to: nameDraft)
+        }
+        loadNameDraft()
     }
 
     private var isGeminiKeyWellFormed: Bool {
@@ -268,50 +314,32 @@ struct ProviderSettingsView: View {
         if provider.kind == .gemini {
             return "AIzaSy..."
         }
-        if provider.name.lowercased().contains("openai") {
-            return "sk-..."
-        }
-        if provider.name.lowercased().contains("groq") {
-            return "gsk_..."
-        } else {
-            return "sk-or-..."
+        switch provider.presetID {
+        case "openai": return "sk-..."
+        case "groq": return "gsk_..."
+        default: return "sk-or-..."
         }
     }
 
     private var customProviders: [AIProviderConfiguration] {
-        store.providers.filter { p in
-            guard let match = p.matchingPreset else { return true }
-            return match.id == "custom" || p.name != match.name
-        }
+        store.providers.filter(\.isCustom)
     }
 
     private var providerSelection: Binding<String> {
         Binding<String>(
             get: {
-                if let preset = provider.matchingPreset, provider.name == preset.name {
-                    return preset.id
-                }
-                return provider.id.uuidString
+                provider.isCustom ? provider.id.uuidString : provider.presetID
             },
             set: { newSelection in
                 if newSelection == "__add_custom__" {
-                    let custom = AIProviderConfiguration(
-                        name: "Custom Endpoint",
-                        kind: .openAICompatible,
-                        baseURL: "https://api.example.com/v1",
-                        apiKey: "",
-                        model: "default"
-                    )
-                    let added = store.add(custom, activate: true)
+                    let added = store.add(preset: .custom, activate: true)
                     store.setActiveProvider(added.id)
                     resetModelList()
                     return
                 }
 
                 if let preset = AIProviderPreset.all.first(where: { $0.id == newSelection }) {
-                    if let existing = store.providers.first(where: {
-                        $0.matchingPreset?.id == preset.id && $0.name == preset.name
-                    }) {
+                    if let existing = store.providers.first(where: { $0.presetID == preset.id }) {
                         store.setActiveProvider(existing.id)
                     } else {
                         let created = store.add(preset: preset, activate: true)
@@ -325,40 +353,21 @@ struct ProviderSettingsView: View {
         )
     }
 
-    private var availableModelOptions: [ProviderModelOption] {
-        var options: [ProviderModelOption] = []
-        if let preset = provider.matchingPreset {
-            options.append(contentsOf: preset.suggestedModels)
-        }
-        for m in models {
-            if !options.contains(where: { $0.id == m.id }) {
-                options.append(m)
-            }
-        }
+    private static let customModelTag = "__custom__"
+
+    private var modelOptions: [String] {
         let current = provider.resolvedModel
-        if !current.isEmpty && !options.contains(where: { $0.id == current })
-            && !isCustomModelActive
-        {
-            options.append(ProviderModelOption(id: current, label: current))
-        }
-        return options
+        guard !current.isEmpty, !models.contains(current) else { return models }
+        return models + [current]
     }
 
     private var modelPickerBinding: Binding<String> {
         Binding<String>(
-            get: {
-                if isCustomModelActive { return "__custom__" }
-                let current = provider.resolvedModel
-                if availableModelOptions.contains(where: { $0.id == current }) {
-                    return current
-                }
-                return "__custom__"
-            },
+            get: { provider.resolvedModel },
             set: { newValue in
-                if newValue == "__custom__" {
+                if newValue == Self.customModelTag {
                     isCustomModelActive = true
                 } else {
-                    isCustomModelActive = false
                     var updated = provider
                     updated.model = newValue
                     store.update(updated)
@@ -367,33 +376,37 @@ struct ProviderSettingsView: View {
         )
     }
 
-    private func syncCustomModelState() {
-        let current = provider.resolvedModel
-        if availableModelOptions.isEmpty {
-            isCustomModelActive = true
-        } else if !current.isEmpty && !availableModelOptions.contains(where: { $0.id == current }) {
-            isCustomModelActive = true
-        } else {
-            isCustomModelActive = false
-        }
+    private var canLoadModels: Bool {
+        let baseURL =
+            provider.resolvedBaseURL.isEmpty
+            ? provider.kind.defaultBaseURL : provider.resolvedBaseURL
+        let hasKey = !provider.requiresAPIKey || !provider.effectiveAPIKey.isEmpty
+        return AIProviderConfiguration.isUsableBaseURL(baseURL) && hasKey
+    }
+
+    private var modelListSource: [String] {
+        [provider.id.uuidString, provider.resolvedBaseURL, provider.effectiveAPIKey]
     }
 
     private func resetModelList() {
         models = []
         modelError = nil
+        isCustomModelActive = false
     }
 
     private func loadModels() async {
+        let providerID = provider.id
         isLoadingModels = true
         modelError = nil
         defer { isLoadingModels = false }
 
         do {
             let loaded = try await AIProviderClient().availableModels(for: provider)
-            guard provider.id == store.activeProviderID else { return }
+            guard !Task.isCancelled, providerID == store.activeProviderID else { return }
             models = loaded
+            isCustomModelActive = false
         } catch {
-            guard provider.id == store.activeProviderID else { return }
+            guard !Task.isCancelled, providerID == store.activeProviderID else { return }
             models = []
             modelError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
@@ -412,20 +425,17 @@ struct ProviderSettingsView: View {
             return
         }
 
+        if provider.kind == .gemini && !isGeminiKeyWellFormed {
+            testStatus = .failure(
+                "Invalid key format. Gemini keys start with 'AIza' (39 characters).")
+            return
+        }
+
         do {
-            if provider.kind == .gemini {
-                if !isGeminiKeyWellFormed {
-                    testStatus = .failure(
-                        "Invalid key format. Gemini keys start with 'AIza' (39 characters).")
-                    return
-                }
-                testStatus = .success("Key format verified. Ready for requests!")
-            } else {
-                let loaded = try await AIProviderClient().availableModels(for: provider)
-                models = loaded
-                testStatus = .success(
-                    "Connected! Loaded \(loaded.count) model\(loaded.count == 1 ? "" : "s").")
-            }
+            let loaded = try await AIProviderClient().availableModels(for: provider)
+            models = loaded
+            testStatus = .success(
+                "Connected! Loaded \(loaded.count) model\(loaded.count == 1 ? "" : "s").")
         } catch {
             let msg = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             testStatus = .failure(msg)

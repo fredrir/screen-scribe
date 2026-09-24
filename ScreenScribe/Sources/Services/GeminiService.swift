@@ -16,6 +16,10 @@ struct GeminiService {
         model: String,
         baseURL: String = Config.defaultGeminiBaseURL
     ) throws -> URLRequest {
+        guard !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw AIProviderError.invalidConfiguration("no model is set")
+        }
+
         let payload: [String: Any] = [
             "contents": [[
                 "parts": [
@@ -89,6 +93,67 @@ struct GeminiService {
         }
 
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func makeModelsRequest(apiKey: String, baseURL: String, pageToken: String?) throws -> URLRequest {
+        guard var components = URLComponents(string: Config.geminiModelsEndpoint(baseURL: baseURL)) else {
+            throw AIProviderError.invalidConfiguration("the base URL is not a valid http address")
+        }
+        components.queryItems = [URLQueryItem(name: "pageSize", value: "1000")]
+            + (pageToken.map { [URLQueryItem(name: "pageToken", value: $0)] } ?? [])
+        guard let url = components.url else {
+            throw AIProviderError.invalidConfiguration("the base URL is not a valid http address")
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
+        return request
+    }
+
+    /// Reads one page of models, keeping those that support `generateContent`, the only method
+    /// requests use. Gemini doesn't report which models accept images, so nothing else is filtered.
+    static func parseModels(from data: Data) throws -> (models: [String], nextPageToken: String?) {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw AIProviderError.parsingError
+        }
+        if let message = AIProviderError.message(in: json) {
+            throw AIProviderError.apiError(message)
+        }
+
+        let entries = json["models"] as? [[String: Any]] ?? []
+        let models = entries.compactMap { entry -> String? in
+            guard let name = entry["name"] as? String,
+                  (entry["supportedGenerationMethods"] as? [String])?.contains("generateContent") == true else {
+                return nil
+            }
+            return name.hasPrefix("models/") ? String(name.dropFirst("models/".count)) : name
+        }
+        let nextPageToken = (json["nextPageToken"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        return (models, nextPageToken)
+    }
+
+    func fetchModels(apiKey: String, baseURL: String = Config.defaultGeminiBaseURL) async throws -> [String] {
+        guard !apiKey.isEmpty else {
+            throw AIProviderError.apiKeyMissing
+        }
+
+        var models: [String] = []
+        var pageToken: String?
+        repeat {
+            let request = try Self.makeModelsRequest(apiKey: apiKey, baseURL: baseURL, pageToken: pageToken)
+            let (data, response) = try await runner.data(for: request)
+            guard response.statusCode == 200 else {
+                throw AIProviderError.fromResponse(statusCode: response.statusCode, data: data)
+            }
+            let page = try Self.parseModels(from: data)
+            models += page.models
+            pageToken = page.nextPageToken
+        } while pageToken != nil
+
+        guard !models.isEmpty else {
+            throw AIProviderError.apiError("the endpoint did not report any models")
+        }
+        return models.sorted()
     }
 }
 

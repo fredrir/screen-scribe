@@ -10,18 +10,10 @@ private func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
 @main
 struct ProviderRoutingTests {
     @MainActor
-    static func main() async {
-        checkModelResolution()
+    static func main() {
         checkValidation()
-        checkGeminiModelCatalog()
-
-        do {
-            try await checkAvailableModels()
-        } catch {
-            fputs("FAIL: \(error)\n", stderr)
-            exit(1)
-        }
-
+        checkPresetsStartWithoutModel()
+        checkGeminiEndpoints()
         print("ProviderRoutingTests passed")
     }
 
@@ -33,25 +25,6 @@ struct ProviderRoutingTests {
             apiKey: "AIza-test",
             model: model
         )
-    }
-
-    @MainActor
-    private static func checkModelResolution() {
-        expect(AIProviderClient.resolvedModel(for: gemini(model: "gemini-3.6-flash")) == "gemini-3.7-flash",
-               "Retired Gemini models should be migrated")
-        expect(AIProviderClient.resolvedModel(for: gemini(model: "")) == Config.defaultGeminiModelID,
-               "Providers without a model should fall back to the type default")
-
-        let compatible = AIProviderConfiguration(
-            name: "Ollama",
-            kind: .openAICompatible,
-            baseURL: "http://localhost:11434/v1",
-            model: "llama3.2"
-        )
-        expect(AIProviderClient.resolvedModel(for: compatible) == "llama3.2",
-               "OpenAI-compatible models should be passed through untouched")
-
-        print("  model resolution ok")
     }
 
     @MainActor
@@ -83,7 +56,8 @@ struct ProviderRoutingTests {
             kind: .openAICompatible,
             baseURL: "http://localhost:1234/v1",
             apiKey: "",
-            model: "local-model"
+            model: "local-model",
+            presetID: "lmstudio"
         )
         expect(local.validationIssues.isEmpty,
                "Local OpenAI-compatible endpoints should not require an API key")
@@ -92,24 +66,23 @@ struct ProviderRoutingTests {
         print("  validation ok")
     }
 
-    private static func checkGeminiModelCatalog() {
-        expect(Config.availableGeminiModels.contains(where: { $0.id == Config.defaultGeminiModelID }),
-               "The default Gemini model should be part of the catalog")
+    /// Models come from the provider, so no preset should pick one up front.
+    private static func checkPresetsStartWithoutModel() {
+        expect(AIProviderPreset.all.allSatisfy { $0.makeProvider().model.isEmpty },
+               "New providers should start without a model")
+        expect(AIProviderPreset.all.allSatisfy { $0.makeProvider().presetID == $0.id },
+               "New providers should remember their preset")
+    }
+
+    private static func checkGeminiEndpoints() {
         expect(Config.geminiEndpoint(for: "gemini-3.7-flash", baseURL: "https://proxy.example.com/")
                == "https://proxy.example.com/v1beta/models/gemini-3.7-flash:generateContent",
                "Custom Gemini base URLs should be supported without doubling slashes")
         expect(Config.geminiEndpoint(for: "gemini-3.7-flash") ==
                "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
                "The default Gemini endpoint should be unchanged")
-    }
-
-    @MainActor
-    private static func checkAvailableModels() async throws {
-        let models = try await AIProviderClient().availableModels(for: gemini(model: "gemini-3.7-flash"))
-        expect(models.map(\.id) == Config.availableGeminiModels.map(\.id),
-               "Gemini should offer the bundled model catalog")
-        expect(models.allSatisfy { !$0.label.isEmpty }, "Catalog entries should be labelled")
-
-        print("  available models ok")
+        expect(Config.geminiModelsEndpoint(baseURL: "https://proxy.example.com/")
+               == "https://proxy.example.com/v1beta/models",
+               "The Gemini model list should sit under the same API root")
     }
 }

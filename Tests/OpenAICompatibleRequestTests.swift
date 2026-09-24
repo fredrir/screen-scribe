@@ -48,6 +48,18 @@ struct OpenAICompatibleRequestTests {
         expect(OpenAICompatibleEndpoint.models(baseURL: "https://api.openai.com/v1")?.absoluteString
                == "https://api.openai.com/v1/models",
                "The models endpoint should sit next to chat completions")
+        expect(OpenAICompatibleEndpoint.modelInfo(baseURL: "http://llm.localhost/v1")?.absoluteString
+               == "http://llm.localhost/v1/model/info",
+               "LiteLLM's model info should sit next to the models endpoint")
+        expect(OpenAICompatibleEndpoint.serverRoute(baseURL: "http://localhost:11434/v1/", path: "api/show")?.absoluteString
+               == "http://localhost:11434/api/show",
+               "Native routes should replace the /v1 prefix")
+        expect(OpenAICompatibleEndpoint.serverRoute(baseURL: "http://gpu-box/ollama/v1", path: "api/show")?.absoluteString
+               == "http://gpu-box/ollama/api/show",
+               "Native routes should keep a reverse-proxy prefix")
+        expect(OpenAICompatibleEndpoint.serverRoute(baseURL: "http://localhost:1234", path: "api/v1/models")?.absoluteString
+               == "http://localhost:1234/api/v1/models",
+               "Native routes should work without a /v1 prefix")
 
         expect(OpenAICompatibleEndpoint.chatCompletions(baseURL: "") == nil,
                "An empty base URL has no endpoint")

@@ -20,6 +20,12 @@ struct ProviderStoreTests {
 
         checkMigration(defaults: defaults)
         checkCRUD(defaults: defaults)
+
+        defaults.removePersistentDomain(forName: suiteName)
+        checkRenaming(defaults: defaults)
+
+        defaults.removePersistentDomain(forName: suiteName)
+        checkLegacyPresets(defaults: defaults)
         print("ProviderStoreTests passed")
     }
 
@@ -38,8 +44,7 @@ struct ProviderStoreTests {
         expect(migrated.baseURL == Config.defaultGeminiBaseURL,
                "The migrated provider should use the default Gemini endpoint")
         expect(migrated.apiKey == "legacy-key", "The stored API key should be carried over")
-        expect(migrated.model == "gemini-3.7-flash",
-               "The stored model should be migrated to the current catalog entry")
+        expect(migrated.model == "gemini-3.5-flash", "The stored model should be carried over as-is")
 
         expect(defaults.data(forKey: ProviderStore.providersKey) != nil,
                "The migrated provider should be persisted")
@@ -100,5 +105,75 @@ struct ProviderStoreTests {
         expect(reloaded.activeProvider.apiKey == "sk-work", "Credentials should survive a reload")
 
         print("  CRUD ok")
+    }
+
+    @MainActor
+    private static func checkRenaming(defaults: UserDefaults) {
+        let store = ProviderStore(defaults: defaults)
+        let custom = store.add(preset: .custom)
+        expect(custom.name == "Custom Endpoint", "New custom endpoints should get the default name")
+        expect(custom.isCustom, "Custom endpoints should remember their preset")
+
+        store.rename(id: custom.id, to: "  My LLM  ")
+        expect(store.provider(id: custom.id)?.name == "My LLM", "Names should be trimmed")
+
+        store.rename(id: custom.id, to: "My LLM")
+        expect(store.provider(id: custom.id)?.name == "My LLM",
+               "Keeping the current name should not add a suffix")
+
+        store.rename(id: custom.id, to: "Ollama")
+        let renamed = store.provider(id: custom.id)
+        expect(renamed?.isCustom == true, "A preset name should not turn an endpoint into that preset")
+        expect(renamed?.isLocal == false, "A preset name should not change the API key rules")
+
+        let second = store.add(preset: .custom)
+        store.rename(id: second.id, to: "Ollama")
+        expect(store.provider(id: second.id)?.name == "Ollama 2", "Renames should keep names unique")
+
+        store.rename(id: second.id, to: "   ")
+        expect(store.provider(id: second.id)?.name == "Custom Endpoint",
+               "Empty names should fall back to the preset name")
+
+        let port = store.add(preset: .custom)
+        var pointed = port
+        pointed.baseURL = "http://gpu-box:12345/v1"
+        store.update(pointed)
+        expect(store.provider(id: port.id)?.isCustom == true,
+               "The base URL should not turn an endpoint into a preset")
+
+        store.rename(id: UUID(), to: "Ghost")
+        expect(!store.providers.contains(where: { $0.name == "Ghost" }), "Unknown providers should be ignored")
+
+        let reloaded = ProviderStore(defaults: defaults)
+        expect(reloaded.provider(id: custom.id)?.name == "Ollama", "Renames should survive a reload")
+        expect(reloaded.provider(id: custom.id)?.isCustom == true, "Presets should survive a reload")
+
+        print("  renaming ok")
+    }
+
+    /// Providers saved before presets were stored should keep the classification the picker showed.
+    @MainActor
+    private static func checkLegacyPresets(defaults: UserDefaults) {
+        let legacy: [[String: String]] = [
+            ["name": "Gemini", "kind": "gemini", "baseURL": Config.defaultGeminiBaseURL],
+            ["name": "Gemini 2", "kind": "gemini", "baseURL": Config.defaultGeminiBaseURL],
+            ["name": "Ollama", "kind": "openAICompatible", "baseURL": "http://gpu-box.lan/v1"],
+            ["name": "Custom Endpoint", "kind": "openAICompatible", "baseURL": "http://localhost:1234/v1"],
+        ]
+        let json = legacy.map { fields in
+            fields.merging(["id": UUID().uuidString, "apiKey": "", "model": "m"]) { current, _ in current }
+        }
+        defaults.set(try! JSONSerialization.data(withJSONObject: json), forKey: ProviderStore.providersKey)
+
+        let store = ProviderStore(defaults: defaults)
+        expect(store.providers.map(\.presetID) == ["gemini", "custom", "ollama", "custom"],
+               "Legacy providers should count as a preset only while they keep its name")
+
+        let stored = defaults.data(forKey: ProviderStore.providersKey)
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [[String: Any]] } ?? []
+        expect(stored.compactMap { $0["presetID"] as? String } == ["gemini", "custom", "ollama", "custom"],
+               "Inferred presets should be written back on load")
+
+        print("  legacy presets ok")
     }
 }

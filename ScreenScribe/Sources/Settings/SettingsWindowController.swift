@@ -118,7 +118,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTo
     ) -> NSToolbarItem? {
         switch itemIdentifier {
         case ToolbarID.provider:
-            return makeToolbarItem(for: .provider)
+            return makeToolbarItem(for: .general)
         case ToolbarID.shortcuts:
             return makeToolbarItem(for: .shortcuts)
         default:
@@ -141,15 +141,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTo
 
     private static func tab(for identifier: NSToolbarItem.Identifier) -> SettingsTab {
         switch identifier {
-        case ToolbarID.provider: return .provider
+        case ToolbarID.provider: return .general
         case ToolbarID.shortcuts: return .shortcuts
-        default: return .provider
+        default: return .general
         }
     }
 
     private static func identifier(for tab: SettingsTab) -> NSToolbarItem.Identifier {
         switch tab {
-        case .provider: return ToolbarID.provider
+        case .general: return ToolbarID.provider
         case .shortcuts: return ToolbarID.shortcuts
         }
     }

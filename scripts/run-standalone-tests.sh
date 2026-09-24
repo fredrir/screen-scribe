@@ -23,11 +23,6 @@ run_swift_test() {
 cd "$repo_root"
 
 run_swift_test \
-  GeminiModelCatalogTests \
-  Tests/GeminiModelCatalogTests.swift \
-  ScreenScribe/Sources/Config.swift
-
-run_swift_test \
   GeminiServiceRequestTests \
   Tests/GeminiServiceRequestTests.swift \
   ScreenScribe/Sources/Services/GeminiService.swift \
@@ -38,6 +33,15 @@ run_swift_test \
 run_swift_test \
   OpenAICompatibleRequestTests \
   Tests/OpenAICompatibleRequestTests.swift \
+  ScreenScribe/Sources/Services/OpenAICompatibleService.swift \
+  ScreenScribe/Sources/Services/VisionModelDiscovery.swift \
+  ScreenScribe/Sources/Services/AIProviderError.swift \
+  ScreenScribe/Sources/Services/APIRequestRunner.swift
+
+run_swift_test \
+  VisionModelDiscoveryTests \
+  Tests/VisionModelDiscoveryTests.swift \
+  ScreenScribe/Sources/Services/VisionModelDiscovery.swift \
   ScreenScribe/Sources/Services/OpenAICompatibleService.swift \
   ScreenScribe/Sources/Services/AIProviderError.swift \
   ScreenScribe/Sources/Services/APIRequestRunner.swift
@@ -55,6 +59,7 @@ run_swift_test \
   ScreenScribe/Sources/Services/AIProviderClient.swift \
   ScreenScribe/Sources/Services/GeminiService.swift \
   ScreenScribe/Sources/Services/OpenAICompatibleService.swift \
+  ScreenScribe/Sources/Services/VisionModelDiscovery.swift \
   ScreenScribe/Sources/Services/AIProviderError.swift \
   ScreenScribe/Sources/Services/APIRequestRunner.swift \
   ScreenScribe/Sources/Models/AIProvider.swift \

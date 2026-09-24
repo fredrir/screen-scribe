@@ -32,14 +32,6 @@ enum AIProviderKind: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Model used when a provider of this kind has no model yet.
-    var defaultModel: String {
-        switch self {
-        case .gemini: return Config.defaultGeminiModelID
-        case .openAICompatible: return ""
-        }
-    }
-
     /// Local OpenAI-compatible servers usually accept requests without credentials.
     var requiresAPIKey: Bool {
         switch self {
@@ -57,6 +49,8 @@ struct AIProviderConfiguration: Codable, Identifiable, Equatable {
     var baseURL: String
     var apiKey: String
     var model: String
+    /// The preset this provider was created from, so renaming or re-pointing it never reclassifies it.
+    var presetID: String
 
     init(
         id: UUID = UUID(),
@@ -64,7 +58,8 @@ struct AIProviderConfiguration: Codable, Identifiable, Equatable {
         kind: AIProviderKind,
         baseURL: String,
         apiKey: String = "",
-        model: String = ""
+        model: String = "",
+        presetID: String = AIProviderPreset.custom.id
     ) {
         self.id = id
         self.name = name
@@ -72,6 +67,25 @@ struct AIProviderConfiguration: Codable, Identifiable, Equatable {
         self.baseURL = baseURL
         self.apiKey = apiKey
         self.model = model
+        self.presetID = presetID
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        kind = try container.decode(AIProviderKind.self, forKey: .kind)
+        baseURL = try container.decode(String.self, forKey: .baseURL)
+        apiKey = try container.decode(String.self, forKey: .apiKey)
+        model = try container.decode(String.self, forKey: .model)
+        presetID = try container.decodeIfPresent(String.self, forKey: .presetID)
+            ?? Self.legacyPresetID(name: name, kind: kind)
+    }
+
+    /// Providers saved before `presetID` existed counted as a preset only while they kept its name.
+    private static func legacyPresetID(name: String, kind: AIProviderKind) -> String {
+        let preset = AIProviderPreset.all.first { $0.name == name && $0.kind == kind && $0 != .custom }
+        return preset?.id ?? AIProviderPreset.custom.id
     }
 
     var displayName: String {
@@ -146,22 +160,15 @@ struct AIProviderConfiguration: Codable, Identifiable, Equatable {
     }
 }
 
-/// A model option offered in the provider settings UI.
-struct ProviderModelOption: Identifiable, Equatable {
-    let id: String
-    let label: String
-}
-
 /// Template used by the settings UI to create a new provider entry.
 struct AIProviderPreset: Identifiable, Equatable {
     let id: String
     let name: String
     let kind: AIProviderKind
     let baseURL: String
-    let model: String
 
     func makeProvider() -> AIProviderConfiguration {
-        AIProviderConfiguration(name: name, kind: kind, baseURL: baseURL, apiKey: "", model: model)
+        AIProviderConfiguration(name: name, kind: kind, baseURL: baseURL, presetID: id)
     }
 
     var websiteURL: URL? {
@@ -183,129 +190,65 @@ struct AIProviderPreset: Identifiable, Equatable {
         id == "ollama" || id == "lmstudio"
     }
 
-    var suggestedModels: [ProviderModelOption] {
-        switch id {
-        case "gemini":
-            return Config.availableGeminiModels.map {
-                ProviderModelOption(id: $0.id, label: "\($0.label)\($0.note.map { " (\($0))" } ?? "")")
-            }
-        case "openai":
-            return [
-                ProviderModelOption(id: "gpt-4o", label: "GPT-4o (Recommended)"),
-                ProviderModelOption(id: "gpt-4o-mini", label: "GPT-4o Mini (Fast)"),
-                ProviderModelOption(id: "o1", label: "o1 (Reasoning)"),
-                ProviderModelOption(id: "o3-mini", label: "o3-mini (Fast Reasoning)")
-            ]
-        case "openrouter":
-            return [
-                ProviderModelOption(id: "openai/gpt-4o", label: "OpenAI: GPT-4o"),
-                ProviderModelOption(id: "anthropic/claude-3.5-sonnet", label: "Anthropic: Claude 3.5 Sonnet"),
-                ProviderModelOption(id: "google/gemini-2.5-flash", label: "Google: Gemini 2.5 Flash"),
-                ProviderModelOption(id: "deepseek/deepseek-chat", label: "DeepSeek: V3")
-            ]
-        case "groq":
-            return [
-                ProviderModelOption(id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B Versatile"),
-                ProviderModelOption(id: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant")
-            ]
-        case "ollama":
-            return [
-                ProviderModelOption(id: "llama3.2", label: "llama3.2"),
-                ProviderModelOption(id: "llava", label: "llava (Vision)")
-            ]
-        case "lmstudio":
-            return [
-                ProviderModelOption(id: "local-model", label: "local-model")
-            ]
-        default:
-            return []
-        }
-    }
-
     static let all: [AIProviderPreset] = [
         AIProviderPreset(
             id: "gemini",
             name: "Gemini",
             kind: .gemini,
-            baseURL: Config.defaultGeminiBaseURL,
-            model: Config.defaultGeminiModelID
+            baseURL: Config.defaultGeminiBaseURL
         ),
         AIProviderPreset(
             id: "openai",
             name: "OpenAI",
             kind: .openAICompatible,
-            baseURL: "https://api.openai.com/v1",
-            model: "gpt-4o"
+            baseURL: "https://api.openai.com/v1"
         ),
         AIProviderPreset(
             id: "openrouter",
             name: "OpenRouter",
             kind: .openAICompatible,
-            baseURL: "https://openrouter.ai/api/v1",
-            model: "openai/gpt-4o"
+            baseURL: "https://openrouter.ai/api/v1"
         ),
         AIProviderPreset(
             id: "groq",
             name: "Groq",
             kind: .openAICompatible,
-            baseURL: "https://api.groq.com/openai/v1",
-            model: "llama-3.3-70b-versatile"
+            baseURL: "https://api.groq.com/openai/v1"
         ),
         AIProviderPreset(
             id: "ollama",
             name: "Ollama",
             kind: .openAICompatible,
-            baseURL: "http://localhost:11434/v1",
-            model: "llama3.2"
+            baseURL: "http://localhost:11434/v1"
         ),
         AIProviderPreset(
             id: "lmstudio",
             name: "LM Studio",
             kind: .openAICompatible,
-            baseURL: "http://localhost:1234/v1",
-            model: "local-model"
+            baseURL: "http://localhost:1234/v1"
         ),
-        AIProviderPreset(
-            id: "custom",
-            name: "Custom",
-            kind: .openAICompatible,
-            baseURL: "",
-            model: ""
-        ),
+        custom,
     ]
+
+    static let custom = AIProviderPreset(
+        id: "custom",
+        name: "Custom Endpoint",
+        kind: .openAICompatible,
+        baseURL: ""
+    )
 }
 
 extension AIProviderConfiguration {
     var matchingPreset: AIProviderPreset? {
-        if kind == .gemini {
-            return AIProviderPreset.all.first(where: { $0.id == "gemini" })
-        }
-        let url = baseURL.lowercased()
-        let n = name.lowercased()
-        if n == "openai" || url.contains("api.openai.com") {
-            return AIProviderPreset.all.first(where: { $0.id == "openai" })
-        }
-        if n == "openrouter" || url.contains("openrouter.ai") {
-            return AIProviderPreset.all.first(where: { $0.id == "openrouter" })
-        }
-        if n == "groq" || url.contains("api.groq.com") {
-            return AIProviderPreset.all.first(where: { $0.id == "groq" })
-        }
-        if n == "ollama" || url.contains("11434") {
-            return AIProviderPreset.all.first(where: { $0.id == "ollama" })
-        }
-        if n == "lm studio" || url.contains("1234") {
-            return AIProviderPreset.all.first(where: { $0.id == "lmstudio" })
-        }
-        return nil
+        AIProviderPreset.all.first { $0.id == presetID }
     }
 
     var isLocal: Bool {
         matchingPreset?.isLocal ?? false
     }
 
-    var presetID: String {
-        matchingPreset?.id ?? "custom"
+    var isCustom: Bool {
+        presetID == AIProviderPreset.custom.id
     }
 }
 

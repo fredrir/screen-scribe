@@ -2,21 +2,21 @@ import Carbon
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case provider = "Provider"
+    case general = "General"
     case shortcuts = "Shortcuts"
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .provider: return "AI Provider"
+        case .general: return "General"
         case .shortcuts: return "Shortcuts"
         }
     }
 
     var icon: String {
         switch self {
-        case .provider: return "sparkles"
+        case .general: return "gearshape"
         case .shortcuts: return "command"
         }
     }
@@ -38,7 +38,7 @@ final class SettingsTabModel: ObservableObject {
         {
             selectedTab = tab
         } else {
-            selectedTab = .provider
+            selectedTab = .general
         }
     }
 }
@@ -254,7 +254,7 @@ struct SettingsView: View {
     var body: some View {
         Group {
             switch model.selectedTab {
-            case .provider:
+            case .general:
                 ProviderSettingsView()
             case .shortcuts:
                 ShortcutsSettingsView(recorder: recorder)
